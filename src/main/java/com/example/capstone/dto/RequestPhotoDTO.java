@@ -27,15 +27,5 @@ public class RequestPhotoDTO {
   @NotBlank
   private List<MultipartFile> photos;
 
-  public static Photo toEntity(MultipartFile photo, String filename, User user, TravelGroup travelGroup) {
-    return new Photo(
-        user,
-        travelGroup,
-        filename,
-        "",
-        photo.getSize(),
-        photo.getContentType()
-    );
-  }
 
 }

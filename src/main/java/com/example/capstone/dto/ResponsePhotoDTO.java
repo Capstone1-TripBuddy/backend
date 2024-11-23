@@ -1,21 +1,19 @@
 package com.example.capstone.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class RequestAlbumDTO {
+public class ResponsePhotoDTO {
 
-  @NotBlank
-  long groupId;
-
-  @NotBlank
-  String title;
+  private String fileName;
+  private String fileUrl;
+  private Long imageSize;
+  private Instant uploadDate;
 
 }

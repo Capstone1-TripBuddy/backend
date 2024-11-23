@@ -1,18 +1,28 @@
 package com.example.capstone.service;
 
+import com.example.capstone.dto.RequestAlbumDTO;
 import com.example.capstone.dto.ResponseAlbumDTO;
+import com.example.capstone.dto.ResponsePhotoDTO;
 import com.example.capstone.entity.Album;
+import com.example.capstone.entity.AlbumPhoto;
+import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.TravelGroup;
 import com.example.capstone.repository.AlbumPhotoRepository;
 import com.example.capstone.repository.AlbumRepository;
 import com.example.capstone.repository.PhotoRepository;
 import com.example.capstone.repository.TravelGroupRepository;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,23 +32,20 @@ public class AlbumService {
   private final  AlbumRepository albumRepository;
   private final AlbumPhotoRepository albumPhotoRepository;
   private final PhotoRepository photoRepository;
-  private final PhotoService photoService;
-  private final S3Service s3Service;
+  private final FileService fileService;
 
   public AlbumService(
       final TravelGroupRepository travelGroupRepository,
       final AlbumRepository albumRepository,
       final AlbumPhotoRepository albumPhotoRepository,
       final PhotoRepository photoRepository,
-      final PhotoService photoService,
-      final S3Service s3Service
+      final FileService fileService
       ) {
     this.travelGroupRepository = travelGroupRepository;
     this.albumRepository = albumRepository;
     this.albumPhotoRepository = albumPhotoRepository;
     this.photoRepository = photoRepository;
-    this.photoService = photoService;
-    this.s3Service = s3Service;
+    this.fileService = fileService;
   }
 
 
@@ -54,41 +61,57 @@ public class AlbumService {
         .collect(Collectors.toList());
   }
 
-  public Optional<List<Entry<String, ByteArrayResource>>> findAllPhotos() {
-    List<Entry<String, ByteArrayResource>> photos = s3Service.getAllFilesAsByteArrayResource();
-    if (photos.isEmpty()) {
-      return Optional.empty(); // 사진이 없으면 빈 리스트 반환
+  public Optional<List<ResponsePhotoDTO>> findAllAlbumPhotos(RequestAlbumDTO request) {
+    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumTitle(request.getTitle());
+    if (albumPhotos.isEmpty()) {
+      return Optional.empty();
     }
 
-    return Optional.of(photos);
+    // 페이지네이션 및 이미지 정보 매핑
+    List<ResponsePhotoDTO> response = new ArrayList<>();
+    for (AlbumPhoto albumPhoto : albumPhotos) {
+      Photo photo = albumPhoto.getPhoto();
+
+      ResponsePhotoDTO tmp = new ResponsePhotoDTO(
+          photo.getFileName(),
+          fileService.getFileUrl(photo.getFilePath()),
+          photo.getImageSize(),
+          photo.getUploadDate()
+      );
+      response.add(tmp);
+    }
+
+    return Optional.of(response);
   }
 
-  /*
-  public List<Optional<byte[]>> testFindAllPhotos(RequestAlbumDTO request) {
-    // request로 찾은 앨범이 null일 경우 처리
-    Album album = albumRepository.findByTitle(request.getTitle());
-    if (album == null) {
-      return Collections.emptyList(); // album이 없으면 빈 리스트 반환
+  public Optional<ResponseEntity<ByteArrayResource>> zipAlbum(RequestAlbumDTO request) throws IOException {
+    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumTitle(request.getTitle());
+    if (albumPhotos.isEmpty()) {
+      return Optional.empty();
     }
 
-    // album에 해당하는 앨범 사진 리스트가 null이거나 비어 있으면 처리
-    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumId(album.getId());
-    if (albumPhotos == null || albumPhotos.isEmpty()) {
-      return Collections.emptyList(); // 사진이 없으면 빈 리스트 반환
-    }
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ZipOutputStream zipOut = new ZipOutputStream(baos);
 
-    return albumPhotos.stream()
-        .map(AlbumPhoto::getPhoto)  // 각 AlbumPhoto에서 Photo 객체 추출
-        .filter(Objects::nonNull)  // null인 Photo를 필터링
-        .map(Photo::getId)  // Photo 객체에서 id 추출
-        .map(photoRepository::findById)  // photoId로 Photo 조회
-        .filter(Optional::isPresent)  // Optional이 존재할 경우만 필터링
-        .map(Optional::get)  // Optional에서 Photo 객체 추출
-        .map(Photo::getFilename)  // Photo 객체에서 filename 추출
-        .map(photoService::downloadByFilename)  // filename을 이용해 사진 다운로드
-        .filter(Objects::nonNull)  // null인 Photo를 필터링
-        .collect(Collectors.toList());
+    for (AlbumPhoto albumPhoto : albumPhotos) {
+      Photo photo = albumPhoto.getPhoto();
+      Optional<ByteArrayResource> resource = fileService.loadFile(photo.getFilePath());
+      if (resource.isPresent()) {
+        ZipEntry zipEntry = new ZipEntry(photo.getFileName()); // 파일 이름 설정 (필요에 따라 수정)
+        zipOut.putNextEntry(zipEntry);
+        zipOut.write(resource.get().getByteArray());
+        zipOut.closeEntry();
+      }
+    }
+    zipOut.close();
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("Content-Disposition", "attachment; filename=images.zip");
+    headers.add("Content-Type", "application/zip");
+
+    return Optional.of(ResponseEntity.ok()
+        .headers(headers)
+        .body(new ByteArrayResource(baos.toByteArray())));
   }
 
-   */
 }

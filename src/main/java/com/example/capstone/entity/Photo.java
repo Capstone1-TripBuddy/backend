@@ -39,7 +39,7 @@ public class Photo {
   private TravelGroup group;
 
   @Column(name = "file_name", nullable = false)
-  private String filename;
+  private String fileName;
 
   @Column(name = "file_path")
   private String filePath;

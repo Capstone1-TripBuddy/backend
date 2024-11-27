@@ -9,5 +9,5 @@ public interface AlbumRepository extends JpaRepository<Album, Long> {
 
   Album findByTitle(String title);
 
-  List<Album> findAllByGroupId(final TravelGroup group);
+  List<Album> findAllByGroupId(final Long groupId);
 }

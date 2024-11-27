@@ -2,18 +2,20 @@ package com.example.capstone.dto;
 
 import com.example.capstone.entity.User;
 import jakarta.validation.constraints.NotBlank;
-import java.time.Instant;
+import jakarta.validation.constraints.Null;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Setter
-public class SignupUserDTO {
+public class RequestSignupUserDTO {
 
   @NotBlank
   String name;
@@ -24,22 +26,16 @@ public class SignupUserDTO {
   @NotBlank
   String password;
 
-  // Entity를 DTO로 변환
-  public static SignupUserDTO fromEntity(User user) {
-    return new SignupUserDTO(
-        user.getName(),
-        user.getEmail(),
-        user.getPassword()
-    );
-  }
+  @Setter
+  private MultipartFile profilePicture;
+
 
   // DTO를 Entity로 변환
-  public static User toEntity(final SignupUserDTO user) {
+  public static User toEntity(final RequestSignupUserDTO user) {
     return new User(
         user.getEmail(),
-        user.getName(),
-        null,
-        Instant.now());
+        user.getPassword(),
+        user.getName());
   }
 
 }

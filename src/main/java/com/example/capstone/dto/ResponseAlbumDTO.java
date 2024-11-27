@@ -3,6 +3,7 @@ package com.example.capstone.dto;
 import com.example.capstone.entity.Album;
 import com.example.capstone.entity.User;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,10 +16,10 @@ import lombok.Setter;
 @Setter
 public class ResponseAlbumDTO {
 
-  private long id;
+  private Long id;
   private String title;
   private User creator;
-  private Instant createdAt;
+  private LocalDateTime createdAt;
   private String description;
 
   public static ResponseAlbumDTO fromEntity(Album album) {

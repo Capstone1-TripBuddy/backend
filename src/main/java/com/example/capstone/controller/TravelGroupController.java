@@ -5,6 +5,7 @@ import com.example.capstone.dto.RequestTravelGroupDTO;
 import com.example.capstone.dto.ResponseTravelGroupDTO;
 import com.example.capstone.service.TravelGroupService;
 import com.example.capstone.service.UserService;
+import jakarta.persistence.EntityExistsException;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,7 +23,7 @@ public class TravelGroupController {
   private UserService userService;
 
   // Create a new travel group
-  @PostMapping("/")
+  @PostMapping
   public ResponseEntity<ResponseTravelGroupDTO> createGroup(@RequestBody RequestTravelGroupDTO travelGroupDTO) {
     Optional<ResponseTravelGroupDTO> createdGroup = travelGroupService.createGroup(travelGroupDTO);
     return createdGroup.map(
@@ -37,5 +38,10 @@ public class TravelGroupController {
     return travelGroupDTO.map(
             responseTravelGroupDTO -> new ResponseEntity<>(responseTravelGroupDTO, HttpStatus.CREATED))
         .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+  }
+
+  @ExceptionHandler(EntityExistsException.class)
+  public ResponseEntity<Void> entityExistsExceptionHandler(EntityExistsException e) {
+    return new ResponseEntity<>(HttpStatus.CONFLICT);
   }
 }

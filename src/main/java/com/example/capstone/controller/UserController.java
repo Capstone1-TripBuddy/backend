@@ -1,10 +1,14 @@
 package com.example.capstone.controller;
 
 import com.example.capstone.dto.LoginUserDTO;
+import com.example.capstone.dto.RequestSignupUserDTO;
 import com.example.capstone.dto.ResponseUserDTO;
-import com.example.capstone.dto.SignupUserDTO;
+import com.example.capstone.entity.User;
+import com.example.capstone.service.FileService;
 import com.example.capstone.service.UserService;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.util.Optional;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
@@ -21,10 +25,18 @@ public class UserController {
   @Autowired
   private UserService userService;
 
+  @Autowired
+  private FileService fileService;
+
   // 회원가입
   @PostMapping("/signup")
-  public ResponseEntity<Void> signup(@RequestBody @Valid SignupUserDTO user) {
-    userService.createUser(user);
+  public ResponseEntity<Void> signup(@ModelAttribute @Valid RequestSignupUserDTO request)
+      throws IOException {
+    Optional<User> createdUser = userService.createUser(request);
+    if (createdUser.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+    fileService.storeProfilePicture(createdUser.get(), request.getProfilePicture());
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 
@@ -36,6 +48,16 @@ public class UserController {
 
     return new ResponseEntity<>(validatedUser, HttpStatus.OK);
   }
+
+  @GetMapping("/{userId}/profile")
+  public ResponseEntity<ResponseUserDTO> login(@PathVariable Long userId)
+      throws NotFoundException, BadRequestException {
+    //ResponseUserDTO validatedUser = userService.validateUser(userId);
+
+    return new ResponseEntity<>(HttpStatus.OK);
+  }
+
+
 
   @ExceptionHandler({MethodArgumentNotValidException.class, NotFoundException.class, BadRequestException.class})
   ResponseEntity<String> handleBadSignupRequest(Exception e) {

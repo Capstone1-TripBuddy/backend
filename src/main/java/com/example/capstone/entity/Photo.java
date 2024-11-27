@@ -11,13 +11,16 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+@DynamicInsert
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Entity
@@ -28,17 +31,17 @@ public class Photo {
   @GeneratedValue(strategy = GenerationType.IDENTITY)  // ID를 자동으로 생성
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @ManyToOne(fetch = FetchType.EAGER, optional = false)
   @OnDelete(action = OnDeleteAction.CASCADE)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @ManyToOne(fetch = FetchType.EAGER, optional = false)
   @OnDelete(action = OnDeleteAction.CASCADE)
   @JoinColumn(name = "group_id", nullable = false)
   private TravelGroup group;
 
-  @Column(name = "file_name", nullable = false)
+  @Column(name = "file_name")
   private String fileName;
 
   @Column(name = "file_path")
@@ -46,7 +49,7 @@ public class Photo {
 
   @ColumnDefault("CURRENT_TIMESTAMP")
   @Column(name = "upload_date")
-  private Instant uploadDate;
+  private LocalDateTime uploadDate;
 
   @Column(name = "image_size")
   private Long imageSize;
@@ -65,14 +68,16 @@ public class Photo {
   @Column(name = "has_face")
   private Boolean hasFace;
 
-  public Photo(
-      final User user,
-      final TravelGroup travelGroup,
-      final String filename,
-      final String filepath,
-      final Long imageSize,
-      String imageFormat
-      ) {
+  public Photo(final TravelGroup group, final User user, final String fileName, final String filePath,
+      final long size, final String contentType) {
+    this.group = group;
+    this.user = user;
+    this.fileName = fileName;
+    this.filePath = filePath;
+    this.imageSize = size;
+    this.imageFormat = contentType;
+    //this.uploadDate = Instant.now(); // Set default value for upload date
+    //this.hasFace = false; // Default value for hasFace if not provided
   }
 
 }

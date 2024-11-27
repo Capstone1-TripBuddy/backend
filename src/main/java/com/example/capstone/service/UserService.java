@@ -1,10 +1,11 @@
 package com.example.capstone.service;
 
 import com.example.capstone.dto.LoginUserDTO;
+import com.example.capstone.dto.RequestSignupUserDTO;
 import com.example.capstone.dto.ResponseUserDTO;
-import com.example.capstone.dto.SignupUserDTO;
 import com.example.capstone.entity.User;
 import com.example.capstone.repository.UserRepository;
+import java.io.IOException;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
@@ -20,9 +21,11 @@ public class UserService {
   private UserRepository userRepository;
 
   // Create a new user
-  public void createUser(SignupUserDTO user) {
-    User createdUser = SignupUserDTO.toEntity(user);
+  public Optional<User> createUser(RequestSignupUserDTO user) throws IOException {
+    User createdUser = RequestSignupUserDTO.toEntity(user);
     userRepository.save(createdUser);
+
+    return Optional.of(createdUser);
   }
 
   // Validate a user
@@ -34,10 +37,10 @@ public class UserService {
     if (!foundUser.getPassword().equals(user.getPassword())) {
       throw new BadRequestException();
     }
+
     return new ResponseUserDTO(
         foundUser.getId(),
-        foundUser.getName(),
-        foundUser.getProfilePicture()
+        foundUser.getName()
     );
   }
 

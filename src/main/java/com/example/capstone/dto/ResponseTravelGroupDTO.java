@@ -2,6 +2,7 @@ package com.example.capstone.dto;
 
 import com.example.capstone.entity.TravelGroup;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,22 +14,22 @@ import lombok.Setter;
 @Setter
 public class ResponseTravelGroupDTO {
 
-  long id;
+  Long id;
 
   String groupName;
 
-  Instant createdAt;
+  LocalDateTime createdAt;
 
   String inviteCode;
 
-  private ResponseTravelGroupDTO(long id, String groupName, Instant createdAt, String inviteCode) {
+  private ResponseTravelGroupDTO(Long id, String groupName, LocalDateTime createdAt, String inviteCode) {
     this.id = id;
     this.groupName = groupName;
     this.createdAt = createdAt;
     this.inviteCode = inviteCode;
   }
 
-  public static ResponseTravelGroupDTO createResponseTravelGroupDTO(long id, String groupName, Instant createdAt, String inviteCode) {
+  public static ResponseTravelGroupDTO createResponseTravelGroupDTO(Long id, String groupName, LocalDateTime createdAt, String inviteCode) {
     return new ResponseTravelGroupDTO(id, groupName, createdAt, inviteCode);
   }
 

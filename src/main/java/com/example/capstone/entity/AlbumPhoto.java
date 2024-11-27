@@ -23,17 +23,20 @@ public class AlbumPhoto {
   private AlbumPhotoId id;
 
   @MapsId("albumId")
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @ManyToOne(fetch = FetchType.EAGER, optional = false)
   @OnDelete(action = OnDeleteAction.CASCADE)
   @JoinColumn(name = "album_id", nullable = false)
   private Album album;
 
   @MapsId("photoId")
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @ManyToOne(fetch = FetchType.EAGER, optional = false)
   @OnDelete(action = OnDeleteAction.CASCADE)
   @JoinColumn(name = "photo_id", nullable = false)
   private Photo photo;
 
-  public AlbumPhoto(final Long albumId, final Long photoId) {
+  public AlbumPhoto(final Album album, final Photo photo) {
+    this.id = new AlbumPhotoId(album.getId(), photo.getId());
+    this.album = album;
+    this.photo = photo;
   }
 }

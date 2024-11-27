@@ -12,9 +12,8 @@ import lombok.Setter;
 @Setter
 public class ResponseUserDTO {
 
-  long userId;
+  Long userId;
 
   String name;
 
-  String profilePicture;
 }

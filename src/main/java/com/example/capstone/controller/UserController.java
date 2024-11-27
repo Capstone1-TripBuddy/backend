@@ -49,15 +49,6 @@ public class UserController {
     return new ResponseEntity<>(validatedUser, HttpStatus.OK);
   }
 
-  @GetMapping("/{userId}/profile")
-  public ResponseEntity<ResponseUserDTO> login(@PathVariable Long userId)
-      throws NotFoundException, BadRequestException {
-    //ResponseUserDTO validatedUser = userService.validateUser(userId);
-
-    return new ResponseEntity<>(HttpStatus.OK);
-  }
-
-
 
   @ExceptionHandler({MethodArgumentNotValidException.class, NotFoundException.class, BadRequestException.class})
   ResponseEntity<String> handleBadSignupRequest(Exception e) {

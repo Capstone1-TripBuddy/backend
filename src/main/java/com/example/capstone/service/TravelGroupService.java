@@ -11,6 +11,7 @@ import com.example.capstone.repository.GroupMemberRepository;
 import com.example.capstone.repository.TravelGroupRepository;
 import com.example.capstone.repository.UserRepository;
 import jakarta.persistence.EntityExistsException;
+import jakarta.persistence.EntityNotFoundException;
 import java.time.Instant;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +61,21 @@ public class TravelGroupService {
 
   // Get all travel groups
   public List<ResponseTravelGroupDTO> getAllGroups() {
+    return travelGroupRepository.findAll().stream()
+        .map(ResponseTravelGroupDTO::fromEntity)
+        .collect(Collectors.toList());
+  }
+
+  // Get all travel members
+  public List<ResponseTravelGroupDTO> getAllGroups(Long groupId) {
+    travelGroupRepository.findById(groupId).ifPresent(travelGroup -> {
+
+    });
+    List<GroupMember> groupMembers = groupMemberRepository.findByGroupId(groupId);
+    if (groupMembers.isEmpty()) {
+      throw new EntityNotFoundException("getAllGroups: can't find any group member");
+    }
+
     return travelGroupRepository.findAll().stream()
         .map(ResponseTravelGroupDTO::fromEntity)
         .collect(Collectors.toList());

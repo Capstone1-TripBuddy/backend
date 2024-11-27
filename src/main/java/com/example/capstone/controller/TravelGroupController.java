@@ -40,6 +40,12 @@ public class TravelGroupController {
         .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
   }
 
+ @GetMapping("/members/{groupId}")
+  public ResponseEntity<ResponseTravelGroupDTO> getAllMembers(@PathVariable Long groupId) {
+    // TO DO
+    return new ResponseEntity<>(HttpStatus.OK);
+  }
+
   @ExceptionHandler(EntityExistsException.class)
   public ResponseEntity<Void> entityExistsExceptionHandler(EntityExistsException e) {
     return new ResponseEntity<>(HttpStatus.CONFLICT);

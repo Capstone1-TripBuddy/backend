@@ -16,4 +16,6 @@ public class ResponseUserDTO {
 
   String name;
 
+  String profilePicture;
+
 }

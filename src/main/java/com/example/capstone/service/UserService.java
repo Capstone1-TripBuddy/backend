@@ -20,6 +20,9 @@ public class UserService {
   @Autowired
   private UserRepository userRepository;
 
+  @Autowired
+  FileService fileService;
+
   // Create a new user
   public Optional<User> createUser(RequestSignupUserDTO user) throws IOException {
     User createdUser = RequestSignupUserDTO.toEntity(user);
@@ -40,7 +43,8 @@ public class UserService {
 
     return new ResponseUserDTO(
         foundUser.getId(),
-        foundUser.getName()
+        foundUser.getName(),
+        fileService.generateSignedUrl(foundUser.getProfilePicture())
     );
   }
 

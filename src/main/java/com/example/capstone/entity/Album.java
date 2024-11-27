@@ -33,11 +33,6 @@ public class Album {
 
   @ManyToOne(fetch = FetchType.EAGER, optional = false)
   @OnDelete(action = OnDeleteAction.CASCADE)
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
-
-  @ManyToOne(fetch = FetchType.EAGER, optional = false)
-  @OnDelete(action = OnDeleteAction.CASCADE)
   @JoinColumn(name = "group_id", nullable = false)
   private TravelGroup group;
 
@@ -52,8 +47,7 @@ public class Album {
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
-  public Album(final User user, final TravelGroup travelGroup, final String albumTitle, final String albumDescription) {
-    this.user = user;
+  public Album(final TravelGroup travelGroup, final String albumTitle, final String albumDescription) {
     this.group = travelGroup;
     this.title = albumTitle;
     this.description = albumDescription;

@@ -18,7 +18,6 @@ public class ResponseAlbumDTO {
 
   private Long id;
   private String title;
-  private User creator;
   private LocalDateTime createdAt;
   private String description;
 
@@ -31,7 +30,6 @@ public class ResponseAlbumDTO {
     return new ResponseAlbumDTO(
         album.getId(),
         album.getTitle(),
-        album.getUser(),
         album.getCreatedAt(),
         album.getDescription()
     );

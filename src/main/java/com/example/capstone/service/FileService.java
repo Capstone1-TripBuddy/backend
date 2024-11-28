@@ -43,15 +43,12 @@ public class FileService {
 
   private final AmazonS3Client s3Client;
   private final PhotoRepository photoRepository;
-  // private final TravelGroupService travelGroupService;
 
   @Autowired
   public FileService(
-      final PhotoRepository photoRepository, final AmazonS3Client s3Client,
-      final TravelGroupService travelGroupService) {
+      final PhotoRepository photoRepository, final AmazonS3Client s3Client) {
     this.photoRepository = photoRepository;
     this.s3Client = s3Client;
-    // this.travelGroupService = travelGroupService;
   }
 
 

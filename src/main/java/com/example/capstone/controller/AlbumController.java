@@ -66,12 +66,10 @@ public class AlbumController {
   }
 
   @GetMapping("/{groupId}")
-  public ResponseEntity<List<ResponseAlbumDTO>> getAllAlbumData(@PathVariable Long groupId) {
-    List<ResponseAlbumDTO> albums = albumService.findAllAlbums(groupId);
-    if (albums.isEmpty()) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
-    return new ResponseEntity<>(albums, HttpStatus.OK);
+  public ResponseEntity<List<ResponsePhotoDTO>> getAllAlbumData(@PathVariable Long groupId) {
+    Optional<List<ResponsePhotoDTO>> albums = albumService.findAllGroupAlbumPhotos(groupId);
+    return albums.map(responsePhotoDTOS -> new ResponseEntity<>(responsePhotoDTOS, HttpStatus.OK))
+        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
   }
 
   @GetMapping("/{groupId}/{userId}") // To Do : API document update

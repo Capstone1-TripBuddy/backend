@@ -4,6 +4,7 @@ import com.example.capstone.dto.LoginUserDTO;
 import com.example.capstone.dto.RequestSignupUserDTO;
 import com.example.capstone.dto.ResponseUserDTO;
 import com.example.capstone.entity.User;
+import com.example.capstone.repository.UserRepository;
 import com.example.capstone.service.FileService;
 import com.example.capstone.service.UserService;
 import jakarta.validation.Valid;
@@ -27,16 +28,20 @@ public class UserController {
 
   @Autowired
   private FileService fileService;
+  @Autowired
+  private UserRepository userRepository;
 
   // 회원가입
   @PostMapping("/signup")
   public ResponseEntity<Void> signup(@ModelAttribute @Valid RequestSignupUserDTO request)
       throws IOException {
-    Optional<User> createdUser = userService.createUser(request);
+    String profilePath = fileService.storeProfilePicture(request.getProfilePicture());
+    Optional<User> createdUser = userService.createUser(request, profilePath);
     if (createdUser.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
-    fileService.storeProfilePicture(createdUser.get(), request.getProfilePicture());
+
+    userRepository.save(createdUser.get());
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 

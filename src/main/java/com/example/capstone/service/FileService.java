@@ -7,11 +7,9 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.example.capstone.dto.RequestAlbumDTO;
 import com.example.capstone.dto.RequestPhotoDTO;
 import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.TravelGroup;
@@ -41,24 +39,19 @@ public class FileService {
   @Value("${cloud.aws.s3.bucket}")
   private String bucketName;
 
-  private String rootFolder = "photos/";
+  private final String rootFolder = "photos/";
 
   private final AmazonS3Client s3Client;
   private final PhotoRepository photoRepository;
-  private final UserRepository userRepository;
-  private final UserService userService;
-  private final TravelGroupService travelGroupService;
+  // private final TravelGroupService travelGroupService;
 
   @Autowired
   public FileService(
       final PhotoRepository photoRepository, final AmazonS3Client s3Client,
-      final UserRepository userRepository, final UserService userService,
       final TravelGroupService travelGroupService) {
     this.photoRepository = photoRepository;
     this.s3Client = s3Client;
-    this.userRepository = userRepository;
-    this.userService = userService;
-    this.travelGroupService = travelGroupService;
+    // this.travelGroupService = travelGroupService;
   }
 
 
@@ -74,16 +67,10 @@ public class FileService {
         + UUID.randomUUID() + file.getOriginalFilename();
   }
 
-  public void storeProfilePicture(User user, MultipartFile profilePicture)
+  public String storeProfilePicture(MultipartFile profilePicture)
       throws IOException {
     String filePath = generateFilePath(profilePicture, "profile");
-    String fileUrl = storeSingleFile(profilePicture, filePath);
-    System.out.println(fileUrl.length());
-
-    userRepository.findById(user.getId()).ifPresent(u -> {
-      u.setProfilePicture(fileUrl);
-      userRepository.save(u);
-    });
+    return storeSingleFile(profilePicture, filePath);
   }
 
   public String storeSingleFile(MultipartFile file, String filePath) throws IOException {
@@ -102,32 +89,18 @@ public class FileService {
     return filePath;
   }
 
-  public void storeFiles(RequestPhotoDTO request) throws IOException {
-    Long groupId = request.getGroupId();
-    Long userId = request.getUserId();
-
-    Optional<User> user = userService.getUserById(userId);
-    Optional<TravelGroup> travelGroup = travelGroupService.findGroupById(groupId);
-
-    if (user.isEmpty()) {
-      throw new IOException("PhotoService: User not found");
-    }
-    if (travelGroup.isEmpty()) {
-      throw new IOException("PhotoService: Travel Group not found");
-    }
-
-    // List<Photo> response = new ArrayList<>();
-    for (MultipartFile file : request.getPhotos()) {
+  public void storeFiles(User user, TravelGroup travelGroup, List<MultipartFile> files) throws IOException {
+    for (MultipartFile file : files) {
       // generate file name
-      String filePath = generateFilePath(file, groupId, userId);
+      String filePath = generateFilePath(file, travelGroup.getId(), user.getId());
 
       // store to S3
       storeSingleFile(file, filePath);
 
       // save to DB
       Photo photo = new Photo(
-          travelGroup.get(),
-          user.get(),
+          travelGroup,
+          user,
           file.getOriginalFilename(),
           filePath,
           file.getSize(),
@@ -175,10 +148,8 @@ public class FileService {
     return Optional.of(resource);
   }
 
-  public Optional<List<ByteArrayResource>> loadFiles(RequestAlbumDTO request) throws IOException {
-    Long groupId = request.getGroupId();
-    String albumTitle = request.getTitle();
-
+  /*
+  public Optional<List<ByteArrayResource>> loadFiles(Long groupId, String albumTitle) throws IOException {
     Optional<TravelGroup> travelGroup = travelGroupService.findGroupById(groupId);
 
     if (travelGroup.isEmpty()) {
@@ -212,6 +183,7 @@ public class FileService {
       return Optional.empty();
     }
   }
+ */
 
   public boolean doesFileExist(String filePath) {
     S3Object s3Object = s3Client.getObject(bucketName, filePath);

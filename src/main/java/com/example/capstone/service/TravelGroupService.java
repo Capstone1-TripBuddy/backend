@@ -1,6 +1,5 @@
 package com.example.capstone.service;
 
-import com.amazonaws.services.s3.model.ExistingObjectReplication;
 import com.example.capstone.dto.RequestGroupMemberDTO;
 import com.example.capstone.dto.RequestTravelGroupDTO;
 import com.example.capstone.dto.ResponseTravelGroupDTO;
@@ -12,7 +11,6 @@ import com.example.capstone.repository.TravelGroupRepository;
 import com.example.capstone.repository.UserRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
-import java.time.Instant;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -66,18 +64,32 @@ public class TravelGroupService {
         .collect(Collectors.toList());
   }
 
-  // Get all travel members
-  public List<ResponseTravelGroupDTO> getAllGroups(Long groupId) {
-    travelGroupRepository.findById(groupId).ifPresent(travelGroup -> {
-
-    });
-    List<GroupMember> groupMembers = groupMemberRepository.findByGroupId(groupId);
+  public List<Optional<TravelGroup>> getGroupsByMemberId(Long memberId) {
+    List<GroupMember> groupMembers = groupMemberRepository.findByUserId(memberId);
     if (groupMembers.isEmpty()) {
-      throw new EntityNotFoundException("getAllGroups: can't find any group member");
+      throw new EntityNotFoundException("getGroupsByMemberId: can't found any travel group");
     }
 
-    return travelGroupRepository.findAll().stream()
-        .map(ResponseTravelGroupDTO::fromEntity)
+    return groupMembers.stream()
+        .map((member) -> {
+          return travelGroupRepository.findById(member.getUser().getId());
+        })
+        .filter(Optional::isPresent)
+        .collect(Collectors.toList());
+  }
+
+  // Get all travel members
+  public List<Optional<User>> getGroupsByGroupId(Long groupId) {
+    List<GroupMember> groupMembers = groupMemberRepository.findByGroupId(groupId);
+    if (groupMembers.isEmpty()) {
+      throw new EntityNotFoundException("getGroupsByGroupId: can't find any group member");
+    }
+
+    return groupMembers.stream()
+        .map((member) -> {
+          return userRepository.findById(member.getUser().getId());
+        })
+        .filter(Optional::isPresent)
         .collect(Collectors.toList());
   }
 

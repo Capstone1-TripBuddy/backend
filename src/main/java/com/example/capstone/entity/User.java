@@ -39,15 +39,17 @@ public class User {
 
   @Setter
   @Column(name = "profile_picture")
-  private String ProfilePicture;
+  private String profilePicture;
 
   @ColumnDefault("CURRENT_TIMESTAMP")
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
-  public User(final String email, final String password, final String name) {
+  public User(final String email, final String password, final String name,
+      final String profilePath) {
     this.email = email;
     this.password = password;
     this.name = name;
+    this.profilePicture = profilePath;
   }
 }

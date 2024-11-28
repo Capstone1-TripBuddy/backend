@@ -26,16 +26,16 @@ public class RequestSignupUserDTO {
   @NotBlank
   String password;
 
-  @Setter
   private MultipartFile profilePicture;
 
 
   // DTO를 Entity로 변환
-  public static User toEntity(final RequestSignupUserDTO user) {
+  public static User toEntity(final RequestSignupUserDTO user, String profilePath) {
     return new User(
         user.getEmail(),
         user.getPassword(),
-        user.getName());
+        user.getName(),
+        profilePath);
   }
 
 }

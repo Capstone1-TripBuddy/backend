@@ -6,5 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
 
-  public List<GroupMember> findByGroupId(Long groupId);
+  List<GroupMember> findByGroupId(Long groupId);
+
+  List<GroupMember> findByUserId(Long userId);
 }

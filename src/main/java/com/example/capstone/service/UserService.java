@@ -24,8 +24,8 @@ public class UserService {
   FileService fileService;
 
   // Create a new user
-  public Optional<User> createUser(RequestSignupUserDTO user) throws IOException {
-    User createdUser = RequestSignupUserDTO.toEntity(user);
+  public Optional<User> createUser(RequestSignupUserDTO user, String profilePath) throws IOException {
+    User createdUser = RequestSignupUserDTO.toEntity(user, profilePath);
     userRepository.save(createdUser);
 
     return Optional.of(createdUser);

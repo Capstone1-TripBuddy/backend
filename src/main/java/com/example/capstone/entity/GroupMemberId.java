@@ -35,7 +35,7 @@ public class GroupMemberId implements java.io.Serializable {
         Objects.equals(this.userId, entity.userId);
   }
 
-  GroupMemberId(final Long groupId, final Long userId) {
+  public GroupMemberId(final Long groupId, final Long userId) {
     this.groupId = groupId;
     this.userId = userId;
   }

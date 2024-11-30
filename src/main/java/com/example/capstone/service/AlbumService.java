@@ -79,7 +79,7 @@ public class AlbumService {
   }
 
   // 그룹의 전체 사진(url) 조회 (페이징 및 최신 순 정렬)
-  public Page<ResponsePhotoDTO> findAllGroupAlbumPhotos(Long groupId, Integer pagepageSize) {
+  public Page<ResponsePhotoDTO> findAllGroupAlbumPhotos(Long groupId, Integer page) {
     // 1. 그룹에 속한 모든 앨범 조회
     List<Album> albums = albumRepository.findAllByGroupId(groupId);
     if (albums.isEmpty()) {
@@ -92,7 +92,7 @@ public class AlbumService {
         .collect(Collectors.toList());
 
     // 3. Pageable 객체 생성 (최신 순 정렬)
-    Pageable pageable = PageRequest.of(pageSize, pageSize, Sort.by(Sort.Direction.DESC, "photo.uploadedAt"));
+    Pageable pageable = PageRequest.of(page, pageSize, Sort.by(Sort.Direction.DESC, "photo.uploadedAt"));
 
     // 4. 페이징 처리된 사진 데이터 조회
     Page<AlbumPhoto> pagedAlbumPhotos = albumPhotoRepository.findByAlbumIdIn(albumIds, pageable);

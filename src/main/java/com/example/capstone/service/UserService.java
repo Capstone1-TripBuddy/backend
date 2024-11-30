@@ -2,6 +2,7 @@ package com.example.capstone.service;
 
 import com.example.capstone.dto.LoginUserDTO;
 import com.example.capstone.dto.RequestSignupUserDTO;
+import com.example.capstone.dto.RequestUpdateProfileDTO;
 import com.example.capstone.dto.ResponseUserDTO;
 import com.example.capstone.entity.User;
 import com.example.capstone.repository.UserRepository;
@@ -44,8 +45,28 @@ public class UserService {
     return new ResponseUserDTO(
         foundUser.getId(),
         foundUser.getName(),
-        fileService.generateSignedUrl(foundUser.getProfilePicture())
+        foundUser.getProfilePicture()
     );
+  }
+
+  // Create a new user
+  public Optional<User> updateUserProfile(RequestUpdateProfileDTO request, String filePath)
+      throws IOException, NotFoundException {
+    Optional<User> user = getUserById(request.getUserId());
+    if (user.isEmpty()) {
+      throw new NotFoundException();
+    }
+
+    User updatedUser = new User(
+        request.getUserId(),
+        user.get().getEmail(),
+        user.get().getPassword(),
+        user.get().getName(),
+        filePath
+    );
+    userRepository.save(updatedUser);
+
+    return Optional.of(updatedUser);
   }
 
   // Get user by ID

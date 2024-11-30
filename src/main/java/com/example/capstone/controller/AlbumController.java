@@ -12,9 +12,12 @@ import com.example.capstone.service.TravelGroupService;
 import com.example.capstone.service.UserService;
 import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import java.util.stream.Collectors;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -51,7 +55,7 @@ public class AlbumController {
     if (user.isEmpty() || travelGroup.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    fileService.storeFiles(user.get(), travelGroup.get(), request.getPhotos());
+    fileService.storeFiles(user.get(), travelGroup.get(), request.getPhotos(), request.getTakenAt());
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
@@ -65,39 +69,61 @@ public class AlbumController {
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
+  // TODO : implementation & API document update
   @GetMapping("/{groupId}")
-  public ResponseEntity<List<ResponsePhotoDTO>> getAllAlbumData(@PathVariable Long groupId) {
-    Optional<List<ResponsePhotoDTO>> albums = albumService.findAllGroupAlbumPhotos(groupId);
-    return albums.map(responsePhotoDTOS -> new ResponseEntity<>(responsePhotoDTOS, HttpStatus.OK))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  public ResponseEntity<Page<ResponsePhotoDTO>> getAllGroupAlbums(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findAllGroupAlbumPhotos(groupId, page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
   }
 
-  @GetMapping("/{groupId}/{userId}") // To Do : API document update
-  public ResponseEntity<List<ResponsePhotoDTO>> getMemberPhotos(@PathVariable Long groupId, @PathVariable Long userId) {
-    Optional<List<ResponsePhotoDTO>> response = albumService.findGroupMemberAlbumPhotos(groupId, userId);
-    return response.map(responsePhotoDTOS -> new ResponseEntity<>(responsePhotoDTOS, HttpStatus.OK))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  // TODO : API document update
+  @GetMapping("/{groupId}/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getAllGroupPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findAllGroupAlbumPhotos(groupId, page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
-  @GetMapping("/{groupId}/sight")
-  public ResponseEntity<List<ResponsePhotoDTO>> getSightPhotos(@PathVariable Long groupId) {
-    Optional<List<ResponsePhotoDTO>> response = albumService.findGroupAlbumPhotosByTitle(groupId, "sight");
-    return response.map(responsePhotoDTOS -> new ResponseEntity<>(responsePhotoDTOS, HttpStatus.OK))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  @GetMapping("/{groupId}/{userId}/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getMemberPhotos(
+      @PathVariable Long groupId, @PathVariable Long userId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findGroupMemberAlbumPhotos(groupId, userId, page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
-  @GetMapping("/{groupId}/food")
-  public ResponseEntity<List<ResponsePhotoDTO>> getFoodPhotos(@PathVariable Long groupId) {
-    Optional<List<ResponsePhotoDTO>> response = albumService.findGroupAlbumPhotosByTitle(groupId, "food");
-    return response.map(responsePhotoDTOS -> new ResponseEntity<>(responsePhotoDTOS, HttpStatus.OK))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  @GetMapping("/{groupId}/sight/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getSightPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "sight", page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
-  @GetMapping("/{groupId}/animal")
-  public ResponseEntity<List<ResponsePhotoDTO>> getAnimalPhotos(@PathVariable Long groupId) {
-    Optional<List<ResponsePhotoDTO>> response = albumService.findGroupAlbumPhotosByTitle(groupId, "animal");
-    return response.map(responsePhotoDTOS -> new ResponseEntity<>(responsePhotoDTOS, HttpStatus.OK))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  @GetMapping("/{groupId}/food/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getFoodPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "food", page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<>(response, HttpStatus.OK);
+  }
+
+  @GetMapping("/{groupId}/animal/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getAnimalPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "animal", page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
   @GetMapping("/{groupId}/{albumName}/download")
@@ -105,6 +131,11 @@ public class AlbumController {
       throws IOException {
     Optional<ResponseEntity<ByteArrayResource>> response = albumService.zipAlbum(groupId, albumName);
     return response.orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  }
+
+  @ExceptionHandler(NoSuchElementException.class)
+  ResponseEntity<String> handleBadSearchRequest(Exception e) {
+    return ResponseEntity.badRequest().body(e.getMessage());
   }
 
   @ExceptionHandler(IOException.class)

@@ -71,9 +71,7 @@ public class TravelGroupService {
     }
 
     return groupMembers.stream()
-        .map((member) -> {
-          return travelGroupRepository.findById(member.getUser().getId());
-        })
+        .map((member) -> travelGroupRepository.findById(member.getGroup().getId()))
         .filter(Optional::isPresent)
         .collect(Collectors.toList());
   }

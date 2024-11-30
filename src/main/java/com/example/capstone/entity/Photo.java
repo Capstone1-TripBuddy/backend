@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -48,8 +49,8 @@ public class Photo {
   private String filePath;
 
   @ColumnDefault("CURRENT_TIMESTAMP")
-  @Column(name = "upload_date")
-  private LocalDateTime uploadDate;
+  @Column(name = "uploaded_at")
+  private Timestamp uploadedAt;
 
   @Column(name = "image_size")
   private Long imageSize;
@@ -58,8 +59,8 @@ public class Photo {
   private String imageFormat;
 
   @Lob
-  @Column(name = "meta_data")
-  private String metaData;
+  @Column(name = "taken_At")
+  private Timestamp takenAt;
 
   @Column(name = "photo_type", length = 50)
   private String photoType;
@@ -69,15 +70,14 @@ public class Photo {
   private Boolean hasFace;
 
   public Photo(final TravelGroup group, final User user, final String fileName, final String filePath,
-      final long size, final String contentType) {
+      final long size, final String contentType, final Timestamp takenAt) {
     this.group = group;
     this.user = user;
     this.fileName = fileName;
     this.filePath = filePath;
     this.imageSize = size;
     this.imageFormat = contentType;
-    //this.uploadDate = Instant.now(); // Set default value for upload date
-    //this.hasFace = false; // Default value for hasFace if not provided
+    this.takenAt = takenAt;
   }
 
 }

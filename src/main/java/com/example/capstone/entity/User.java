@@ -52,4 +52,12 @@ public class User {
     this.name = name;
     this.profilePicture = profilePath;
   }
+
+  public User(final Long userId, final String email, final String password, final String name, final String filePath) {
+    this.id = userId;
+    this.email = email;
+    this.password = password;
+    this.name = name;
+    this.profilePicture = filePath;
+  }
 }

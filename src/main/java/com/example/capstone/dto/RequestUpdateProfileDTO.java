@@ -1,10 +1,9 @@
 package com.example.capstone.dto;
 
-import com.example.capstone.entity.Photo;
-import com.example.capstone.entity.TravelGroup;
 import com.example.capstone.entity.User;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Null;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -17,18 +16,13 @@ import org.springframework.web.multipart.MultipartFile;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Setter
-public class RequestPhotoDTO {
+public class RequestUpdateProfileDTO {
 
-  @NotBlank
+  @NotNull
   private Long userId;
 
-  @NotBlank
-  private Long groupId;
-
-  @NotEmpty
-  private List<MultipartFile> photos;
-
-  @NotEmpty
-  private List<String> takenAt;
+  @NotNull
+  private MultipartFile profilePicture;
 
 }
+

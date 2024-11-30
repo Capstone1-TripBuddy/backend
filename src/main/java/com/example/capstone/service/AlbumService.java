@@ -17,11 +17,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AlbumService {
+
+  private final Integer pageSize = 12;
 
   private final TravelGroupRepository travelGroupRepository;
   private final  AlbumRepository albumRepository;
@@ -71,75 +78,94 @@ public class AlbumService {
         .collect(Collectors.toList());
   }
 
-  // 그룹의 전체 사진(url) 조회
-  public Optional<List<ResponsePhotoDTO>> findAllGroupAlbumPhotos(Long groupId) {
+  // 그룹의 전체 사진(url) 조회 (페이징 및 최신 순 정렬)
+  public Page<ResponsePhotoDTO> findAllGroupAlbumPhotos(Long groupId, Integer pagepageSize) {
+    // 1. 그룹에 속한 모든 앨범 조회
     List<Album> albums = albumRepository.findAllByGroupId(groupId);
     if (albums.isEmpty()) {
-      return Optional.empty();
+      throw new NoSuchElementException("No albums found for group ID: " + groupId);
     }
 
-    List<ResponsePhotoDTO> response = new ArrayList<>();
-    for (Album album : albums) {
-      List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumId(album.getId());
-      if (!albumPhotos.isEmpty()) {
-        albumPhotos.stream().map(AlbumPhoto::getPhoto)
-            .forEach((photo -> {
-              ResponsePhotoDTO foundPhoto = new ResponsePhotoDTO(
-                  photo.getFileName(),
-                  fileService.generateSignedUrl(photo.getFilePath()),
-                  photo.getImageSize(),
-                  photo.getUploadDate());
-              response.add(foundPhoto);
-            }));
-      }
+    // 2. 앨범 ID 리스트 추출
+    List<Long> albumIds = albums.stream()
+        .map(Album::getId)
+        .collect(Collectors.toList());
+
+    // 3. Pageable 객체 생성 (최신 순 정렬)
+    Pageable pageable = PageRequest.of(pageSize, pageSize, Sort.by(Sort.Direction.DESC, "photo.uploadedAt"));
+
+    // 4. 페이징 처리된 사진 데이터 조회
+    Page<AlbumPhoto> pagedAlbumPhotos = albumPhotoRepository.findByAlbumIdIn(albumIds, pageable);
+    if (pagedAlbumPhotos.isEmpty()) {
+      throw new NoSuchElementException("No photos found for group ID: " + groupId);
     }
-    return Optional.of(response);
+
+    // 5. AlbumPhoto → ResponsePhotoDTO 변환
+    return pagedAlbumPhotos.map(albumPhoto -> {
+      Photo photo = albumPhoto.getPhoto();
+      return new ResponsePhotoDTO(
+          photo.getFileName(),
+          photo.getFilePath(),
+          photo.getImageSize(),
+          photo.getUploadedAt().toLocalDateTime()
+      );
+    });
   }
 
+
   // 그룹의 특정 앨범의 전체 사진(url) 조회
-  public Optional<List<ResponsePhotoDTO>> findGroupAlbumPhotosByTitle(Long groupId, String albumTitle) {
-    Optional<List<AlbumPhoto>> albumPhotos = getAllGroupAlbumPhotosByTitle(groupId, albumTitle);
-    if (albumPhotos.isEmpty()) {
-      return Optional.empty();
+  public Page<ResponsePhotoDTO> findGroupAlbumPhotosByTitle(Long groupId, String albumTitle, Integer page) {
+    Optional<Album> album = getGroupAlbumByTitle(groupId, albumTitle);
+    if (album.isEmpty()) {
+      throw new NoSuchElementException("No album found for title: " + albumTitle);
     }
 
-    List<ResponsePhotoDTO> result = new ArrayList<>();
-    for (AlbumPhoto albumPhoto : albumPhotos.get()) {
+    // Pageable 객체 생성
+    Pageable pageable = PageRequest.of(page, pageSize);
+
+    // 페이징 처리된 AlbumPhoto 데이터 조회
+    Page<AlbumPhoto> pagedAlbumPhotos = albumPhotoRepository.findByAlbumId(album.get().getId(), pageable);
+    if (pagedAlbumPhotos.isEmpty()) {
+      throw new NoSuchElementException("No photos found for this album: " + albumTitle);
+    }
+
+    // DTO로 변환
+    return pagedAlbumPhotos.map(albumPhoto -> {
       Photo photo = albumPhoto.getPhoto();
-
-      ResponsePhotoDTO tmp = new ResponsePhotoDTO(
+      return new ResponsePhotoDTO(
           photo.getFileName(),
-          fileService.generateSignedUrl(photo.getFilePath()),
+          photo.getFilePath(),
           photo.getImageSize(),
-          photo.getUploadDate()
-      );
-      result.add(tmp);
-    }
-
-    return Optional.of(result);
+          photo.getUploadedAt().toLocalDateTime());
+    });
   }
 
   // 그룹의 특정 멤버의 전체 사진(url) 조회
-  public Optional<List<ResponsePhotoDTO>> findGroupMemberAlbumPhotos(Long groupId, Long userId) {
+  public Page<ResponsePhotoDTO> findGroupMemberAlbumPhotos(Long groupId, Long userId, Integer page) {
     Optional<User> member = userRepository.findById(userId);
     if (member.isEmpty()) {
-      return Optional.empty();
+      throw new NoSuchElementException("No member found for user: " + userId);
     }
 
     String memberName = member.get().getName();
-    return findGroupAlbumPhotosByTitle(groupId, memberName);
+    return findGroupAlbumPhotosByTitle(groupId, memberName, page);
   }
 
   // 그룹의 특정 앨범의 전체 사진 zip 다운로드
   public Optional<ResponseEntity<ByteArrayResource>> zipAlbum(Long groupId, String albumTitle) throws IOException {
-    Optional<List<AlbumPhoto>> albumPhotos = getAllGroupAlbumPhotosByTitle(groupId, albumTitle);
+    Optional<Album> album = getGroupAlbumByTitle(groupId, albumTitle);
+    if (album.isEmpty()) {
+      return Optional.empty();
+    }
+
+    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumId(album.get().getId());
     if (albumPhotos.isEmpty()) {
       return Optional.empty();
     }
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ZipOutputStream zipOut = new ZipOutputStream(baos);
 
-    for (AlbumPhoto albumPhoto : albumPhotos.get()) {
+    for (AlbumPhoto albumPhoto : albumPhotos) {
       Photo photo = albumPhoto.getPhoto();
       Optional<ByteArrayResource> resource = fileService.loadFile(photo.getFilePath());
       if (resource.isPresent()) {
@@ -160,19 +186,15 @@ public class AlbumService {
         .body(new ByteArrayResource(baos.toByteArray())));
   }
 
-  // 그룹의 전체 사진 엔티티 조회
-  private Optional<List<AlbumPhoto>> getAllGroupAlbumPhotosByTitle(Long groupId, String albumTitle) {
+  // 그룹의 특정 앨범 엔티티 조회
+  private Optional<Album> getGroupAlbumByTitle(Long groupId, String albumTitle) {
     Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
     if (travelGroup.isEmpty()) {
       return Optional.empty();
     }
 
     Album album = albumRepository.findByGroupIdAndTitle(groupId, albumTitle);
-    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumId(album.getId());
-    if (albumPhotos.isEmpty()) {
-      return Optional.empty();
-    }
-    return Optional.of(albumPhotos);
+    return Optional.of(album);
   }
 
 }

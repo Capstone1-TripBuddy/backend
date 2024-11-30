@@ -2,6 +2,7 @@ package com.example.capstone.controller;
 
 import com.example.capstone.dto.LoginUserDTO;
 import com.example.capstone.dto.RequestSignupUserDTO;
+import com.example.capstone.dto.RequestUpdateProfileDTO;
 import com.example.capstone.dto.ResponseUserDTO;
 import com.example.capstone.entity.User;
 import com.example.capstone.repository.UserRepository;
@@ -28,6 +29,7 @@ public class UserController {
 
   @Autowired
   private FileService fileService;
+
   @Autowired
   private UserRepository userRepository;
 
@@ -52,6 +54,18 @@ public class UserController {
     ResponseUserDTO validatedUser = userService.validateUser(user);
 
     return new ResponseEntity<>(validatedUser, HttpStatus.OK);
+  }
+
+  @PostMapping("/profile")
+  public ResponseEntity<Void> updateProfile(@ModelAttribute @Valid RequestUpdateProfileDTO request)
+      throws NotFoundException, IOException {
+    String profilePath = fileService.storeProfilePicture(request.getProfilePicture());
+    Optional<User> updatedUser = userService.updateUserProfile(request, profilePath);
+    if (updatedUser.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
+    return new ResponseEntity<>(HttpStatus.OK);
   }
 
 

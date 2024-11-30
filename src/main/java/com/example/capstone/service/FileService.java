@@ -20,11 +20,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -86,8 +89,16 @@ public class FileService {
     return filePath;
   }
 
-  public void storeFiles(User user, TravelGroup travelGroup, List<MultipartFile> files) throws IOException {
-    for (MultipartFile file : files) {
+  public void storeFiles(User user, TravelGroup travelGroup, List<MultipartFile> files, List<String> filesTakenAt) throws IOException {
+    if (files.size() != filesTakenAt.size()) {
+      throw new BadRequestException(String.format("PhotoService: %d != %d", files.size(), filesTakenAt.size()));
+    }
+
+    for (int i = 0; i < files.size(); i++) {
+      // get when photo is taken
+      Timestamp takenAt = Timestamp.valueOf(LocalDateTime.parse(filesTakenAt.get(i)));
+      MultipartFile file = files.get(i);
+
       // generate file name
       String filePath = generateFilePath(file, travelGroup.getId(), user.getId());
 
@@ -101,25 +112,29 @@ public class FileService {
           file.getOriginalFilename(),
           filePath,
           file.getSize(),
-          file.getContentType()
+          file.getContentType(),
+          takenAt
       );
       photoRepository.save(photo);
-      // response.add(photo);
     }
 
   }
 
+/*
   public String generateSignedUrl(String filePath) {
     try {
       // Signed URL 요청 생성
-      int duration = 60 * 60;
+      int duration = 30 * 60 * 1000; // millisecond
       GeneratePresignedUrlRequest generatePresignedUrlRequest =
           new GeneratePresignedUrlRequest(bucketName, filePath)
               .withMethod(HttpMethod.GET) // HTTP GET 요청용 Signed URL
-              .withExpiration(new Date(System.currentTimeMillis() + duration * 1000));
+              .withExpiration(new Date(System.currentTimeMillis() + duration));
 
       // Signed URL 생성
       URL signedUrl = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+
+      // debug print
+      System.out.println("signedUrl length: " + signedUrl.toString().length());
       return signedUrl.toString();
 
     } catch (Exception e) {
@@ -127,6 +142,7 @@ public class FileService {
           "Failed to generate signed URL: " + e.getMessage(), e);
     }
   }
+  */
 
   public Optional<ByteArrayResource> loadFile(String filePath) throws IOException {
     S3Object s3Object = s3Client.getObject(bucketName, filePath);

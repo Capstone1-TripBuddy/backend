@@ -10,12 +10,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.OnDelete;
@@ -48,9 +48,8 @@ public class Photo {
   @Column(name = "file_path")
   private String filePath;
 
-  @ColumnDefault("CURRENT_TIMESTAMP")
-  @Column(name = "uploaded_at")
-  private Timestamp uploadedAt;
+  @Column(name = "taken_at")
+  private LocalDateTime takenAt;
 
   @Column(name = "image_size")
   private Long imageSize;
@@ -58,26 +57,33 @@ public class Photo {
   @Column(name = "image_format", length = 50)
   private String imageFormat;
 
-  @Lob
-  @Column(name = "taken_At")
-  private Timestamp takenAt;
-
+  @Setter
   @Column(name = "photo_type", length = 50)
   private String photoType;
 
+  @Setter
   @ColumnDefault("0")
   @Column(name = "has_face")
   private Boolean hasFace;
 
-  public Photo(final TravelGroup group, final User user, final String fileName, final String filePath,
-      final long size, final String contentType, final Timestamp takenAt) {
-    this.group = group;
+  @ColumnDefault("CURRENT_TIMESTAMP")
+  @Column(name = "uploaded_at")
+  private LocalDateTime uploadedAt;
+
+  @Setter
+  @Column(name = "analyzed_at")
+  private Instant analyzedAt;
+
+  public Photo(final User user, final TravelGroup group,
+      final String fileName, final String filePath, final LocalDateTime takenAt,
+      final long size, final String contentType) {
     this.user = user;
+    this.group = group;
     this.fileName = fileName;
     this.filePath = filePath;
+    this.takenAt = takenAt;
     this.imageSize = size;
     this.imageFormat = contentType;
-    this.takenAt = takenAt;
   }
 
 }

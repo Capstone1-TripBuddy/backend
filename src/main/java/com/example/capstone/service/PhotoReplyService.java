@@ -23,7 +23,7 @@ public class PhotoReplyService {
   private final PhotoRepository photoRepository;
 
   public void addReply(RequestReplyDTO request) {
-    Optional<User> user = userRepository.findById(request.getId());
+    Optional<User> user = userRepository.findById(request.getUserId());
     Optional<Photo> photo = photoRepository.findById(request.getPhotoId());
     if (user.isEmpty() || photo.isEmpty()) {
       throw new NoSuchElementException();

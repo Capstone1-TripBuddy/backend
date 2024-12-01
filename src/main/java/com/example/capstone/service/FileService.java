@@ -1,29 +1,19 @@
 package com.example.capstone.service;
 
-import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.example.capstone.dto.RequestPhotoDTO;
 import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.TravelGroup;
 import com.example.capstone.entity.User;
 import com.example.capstone.repository.PhotoRepository;
-import com.example.capstone.repository.UserRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -89,11 +79,12 @@ public class FileService {
     return filePath;
   }
 
-  public void storeFiles(User user, TravelGroup travelGroup, List<MultipartFile> files, List<String> filesTakenAt) throws IOException {
+  public List<Long> storeFiles(User user, TravelGroup travelGroup, List<MultipartFile> files, List<String> filesTakenAt) throws IOException {
     if (files.size() != filesTakenAt.size()) {
       throw new BadRequestException(String.format("PhotoService: %d != %d", files.size(), filesTakenAt.size()));
     }
 
+    List<Long> response = new ArrayList<>();
     for (int i = 0; i < files.size(); i++) {
       // get when photo is taken
       Timestamp takenAt = Timestamp.valueOf(LocalDateTime.parse(filesTakenAt.get(i)));
@@ -107,17 +98,18 @@ public class FileService {
 
       // save to DB
       Photo photo = new Photo(
-          travelGroup,
           user,
+          travelGroup,
           file.getOriginalFilename(),
           filePath,
+          takenAt.toLocalDateTime(),
           file.getSize(),
-          file.getContentType(),
-          takenAt
-      );
-      photoRepository.save(photo);
+          file.getContentType());
+      Photo savedPhoto = photoRepository.save(photo);
+      response.add(savedPhoto.getId());
     }
 
+    return response;
   }
 
 /*

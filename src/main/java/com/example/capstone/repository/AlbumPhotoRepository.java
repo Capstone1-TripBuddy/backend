@@ -1,7 +1,9 @@
 package com.example.capstone.repository;
 
+import com.example.capstone.entity.Album;
 import com.example.capstone.entity.AlbumPhoto;
 import com.example.capstone.entity.AlbumPhotoId;
+import com.example.capstone.entity.Photo;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,4 +17,5 @@ public interface AlbumPhotoRepository extends JpaRepository<AlbumPhoto, AlbumPho
 
   Page<AlbumPhoto> findByAlbumIdIn(List<Long> albumIds, Pageable pageable);
 
+  boolean existsByAlbumAndPhoto(Album album, Photo photo);
 }

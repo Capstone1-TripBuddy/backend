@@ -3,11 +3,13 @@ package com.example.capstone.controller;
 import com.example.capstone.dto.RequestPhotoDTO;
 import com.example.capstone.dto.ResponseAlbumDTO;
 import com.example.capstone.dto.ResponsePhotoDTO;
+import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.TravelGroup;
 import com.example.capstone.entity.User;
 import com.example.capstone.service.AlbumService;
 import com.example.capstone.service.FileService;
 
+import com.example.capstone.service.GroupPhotoActivityService;
 import com.example.capstone.service.TravelGroupService;
 import com.example.capstone.service.UserService;
 import java.io.IOException;
@@ -38,13 +40,16 @@ public class AlbumController {
   private final AlbumService albumService;
   private final UserService userService;
   private final TravelGroupService travelGroupService;
+  private final GroupPhotoActivityService groupPhotoActivityService;
 
   public AlbumController(FileService fileService, AlbumService albumService,
-      final UserService userService, final TravelGroupService travelGroupService) {
+      final UserService userService, final TravelGroupService travelGroupService,
+      final GroupPhotoActivityService groupPhotoActivityService) {
     this.fileService = fileService;
     this.albumService = albumService;
     this.userService = userService;
     this.travelGroupService = travelGroupService;
+    this.groupPhotoActivityService = groupPhotoActivityService;
   }
   // 파일 업로드
   @PostMapping("/upload")
@@ -53,9 +58,15 @@ public class AlbumController {
     Optional<User> user = userService.findUserById(request.getUserId());
     Optional<TravelGroup> travelGroup = travelGroupService.findGroupById(request.getGroupId());
     if (user.isEmpty() || travelGroup.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+    List<Long> result = fileService.storeFiles(user.get(), travelGroup.get(), request.getPhotos(), request.getTakenAt());
+    if (result.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    fileService.storeFiles(user.get(), travelGroup.get(), request.getPhotos(), request.getTakenAt());
+    Long lastPhotoId = result.get(result.size() - 1);
+    groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), lastPhotoId,
+        "upload");
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
@@ -69,7 +80,7 @@ public class AlbumController {
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
-  // TODO : implementation & API document update
+  /*
   @GetMapping("/{groupId}")
   public ResponseEntity<Page<ResponsePhotoDTO>> getAllGroupAlbums(@PathVariable Long groupId, @PathVariable Integer page) {
     Page<ResponsePhotoDTO> response = albumService.findAllGroupAlbumPhotos(groupId, page);
@@ -78,8 +89,8 @@ public class AlbumController {
     }
     return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
   }
+  */
 
-  // TODO : API document update
   @GetMapping("/{groupId}/{page}")
   public ResponseEntity<Page<ResponsePhotoDTO>> getAllGroupPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
     Page<ResponsePhotoDTO> response = albumService.findAllGroupAlbumPhotos(groupId, page);

@@ -1,14 +1,21 @@
 package com.example.capstone.service;
 
+import com.example.capstone.dto.ResponseGroupActivity;
 import com.example.capstone.entity.GroupMember;
 import com.example.capstone.entity.GroupPhotoActivity;
 import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.PhotoActivityType;
+import com.example.capstone.entity.User;
 import com.example.capstone.repository.GroupMemberRepository;
 import com.example.capstone.repository.GroupPhotoActivityRepository;
 import com.example.capstone.repository.PhotoActivityTypeRepository;
 import com.example.capstone.repository.PhotoRepository;
+import com.example.capstone.repository.UserRepository;
+import java.time.Instant;
+import java.time.chrono.ChronoLocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
@@ -23,12 +30,37 @@ public class GroupPhotoActivityService {
   private final GroupPhotoActivityRepository groupPhotoActivityRepository;
   private final PhotoActivityTypeRepository photoActivityTypeRepository;
   private final GroupMemberRepository groupMemberRepository;
-  private final AlbumService albumService;
   private final PhotoRepository photoRepository;
+  private final UserRepository userRepository;
 
-  public List<GroupPhotoActivity> getGroupRecentActivity(Long groupId) {
-    return groupPhotoActivityRepository.findByGroupMemberGroupId(groupId);
+  // TODO: 최근 1시간 기록만 필터링
+  // TODO: upload의 경우 List<photo>로 묶기(?) -> 애초에 upload 완료후 마지막 한장만 내역에 기록하기
+  public List<ResponseGroupActivity> getGroupRecentActivity(Long groupId) {
+    // 현재 시간 기준 1시간 전 시간 계산
+    Instant oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS);
+
+    // 그룹 ID에 해당하는 활동 리스트 조회
+    List<GroupPhotoActivity> history = groupPhotoActivityRepository.findByGroupMemberGroupId(groupId);
+
+    // 스트림 처리
+    return history.stream()
+        .filter(activity -> activity.getCreatedAt().isAfter(ChronoLocalDateTime.from(oneHourAgo))) // 1시간 이내 필터링
+        .map(activity -> {
+          // User 엔티티 조회
+          Optional<User> user = userRepository.findById(activity.getGroupMember().getUser().getId());
+
+          // Optional 체크 후 ResponseGroupActivity 생성
+          return user.map(value -> ResponseGroupActivity.fromEntity(
+              value,
+              activity.getPhoto(),
+              activity.getActivityType(),
+              activity.getCreatedAt()
+          )).orElse(null);
+        })
+        .filter(Objects::nonNull) // null 값 제거
+        .toList(); // 결과 리스트로 반환
   }
+
 
   public void addActivity(Long groupId, Long userId, Long photoId, String activityTypeName)
       throws BadRequestException {

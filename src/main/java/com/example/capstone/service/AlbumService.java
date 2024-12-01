@@ -40,7 +40,6 @@ public class AlbumService {
   private final TravelGroupRepository travelGroupRepository;
   private final  AlbumRepository albumRepository;
   private final AlbumPhotoRepository albumPhotoRepository;
-  private final PhotoRepository photoRepository;
   private final FileService fileService;
   private final UserRepository userRepository;
 
@@ -54,7 +53,6 @@ public class AlbumService {
     this.travelGroupRepository = travelGroupRepository;
     this.albumRepository = albumRepository;
     this.albumPhotoRepository = albumPhotoRepository;
-    this.photoRepository = photoRepository;
     this.fileService = fileService;
     this.userRepository = userRepository;
   }
@@ -104,11 +102,11 @@ public class AlbumService {
     return pagedAlbumPhotos.map(albumPhoto -> {
       Photo photo = albumPhoto.getPhoto();
       return new ResponsePhotoDTO(
+          photo.getId(),
           photo.getFileName(),
           photo.getFilePath(),
           photo.getImageSize(),
-          photo.getUploadedAt().toLocalDateTime()
-      );
+          photo.getUploadedAt());
     });
   }
 
@@ -133,10 +131,11 @@ public class AlbumService {
     return pagedAlbumPhotos.map(albumPhoto -> {
       Photo photo = albumPhoto.getPhoto();
       return new ResponsePhotoDTO(
+          photo.getId(),
           photo.getFileName(),
           photo.getFilePath(),
           photo.getImageSize(),
-          photo.getUploadedAt().toLocalDateTime());
+          photo.getUploadedAt());
     });
   }
 

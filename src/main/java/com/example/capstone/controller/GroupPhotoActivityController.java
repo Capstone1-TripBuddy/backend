@@ -2,19 +2,19 @@ package com.example.capstone.controller;
 
 import com.example.capstone.dto.RequestBookmarkDTO;
 import com.example.capstone.dto.RequestReplyDTO;
+import com.example.capstone.dto.RequestShareDTO;
+import com.example.capstone.dto.ResponseGroupActivity;
 import com.example.capstone.dto.ResponsePhotoActivity;
-import com.example.capstone.entity.GroupPhotoActivity;
 import com.example.capstone.entity.PhotoBookmark;
 import com.example.capstone.entity.PhotoQuestion;
 import com.example.capstone.entity.PhotoReply;
-import com.example.capstone.service.AlbumService;
 import com.example.capstone.service.GroupPhotoActivityService;
 import com.example.capstone.service.PhotoBookmarkService;
 import com.example.capstone.service.PhotoQuestionService;
 import com.example.capstone.service.PhotoReplyService;
-import com.example.capstone.service.TravelGroupService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,13 +36,23 @@ public class GroupPhotoActivityController {
   private final PhotoReplyService photoReplyService;
   private final GroupPhotoActivityService groupPhotoActivityService;
   private final PhotoQuestionService photoQuestionService;
-  private final AlbumService albumService;
-  private final TravelGroupService travelGroupService;
+
+
+  @PostMapping("/share")
+  public ResponseEntity<Void> addBookmark(@RequestBody @Valid RequestShareDTO request)
+      throws BadRequestException {
+    groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), request.getPhotoId(),
+        "share");
+    return ResponseEntity.status(HttpStatus.CREATED).build();
+  }
 
   // 사용자 사진 북마크 생성
   @PostMapping("/bookmark")
-  public ResponseEntity<Void> addBookmark(@RequestBody @Valid RequestBookmarkDTO request) {
+  public ResponseEntity<Void> addBookmark(@RequestBody @Valid RequestBookmarkDTO request)
+      throws BadRequestException {
     photoBookmarkService.addBookmark(request);
+    groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), request.getPhotoId(),
+        "bookmark");
     return ResponseEntity.status(HttpStatus.CREATED).build();
   }
 
@@ -62,8 +72,11 @@ public class GroupPhotoActivityController {
 
   // 사용자 사진 댓글 생성
   @PostMapping("/reply")
-  public ResponseEntity<Void> addReply(@RequestBody RequestReplyDTO request) {
+  public ResponseEntity<Void> addReply(@RequestBody RequestReplyDTO request)
+      throws BadRequestException {
     photoReplyService.addReply(request);
+    groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), request.getPhotoId(),
+        "reply");
     return ResponseEntity.status(HttpStatus.CREATED).build();
   }
 
@@ -97,8 +110,8 @@ public class GroupPhotoActivityController {
       - 여행 그룹별 사진 공유 내역 조회
   */
   @GetMapping("/group/{groupId}")
-  public ResponseEntity<List<GroupPhotoActivity>> getGroupRecentActivity(@PathVariable Long groupId) {
-    List<GroupPhotoActivity> response = groupPhotoActivityService.getGroupRecentActivity(groupId);
+  public ResponseEntity<List<ResponseGroupActivity>> getGroupRecentActivity(@PathVariable Long groupId) {
+    List<ResponseGroupActivity> response = groupPhotoActivityService.getGroupRecentActivity(groupId);
     return ResponseEntity.ok(response);
   }
 }

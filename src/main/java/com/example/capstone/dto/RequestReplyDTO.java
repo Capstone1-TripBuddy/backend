@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class RequestReplyDTO {
 
   @NotNull
-  private Long id;
+  private Long groupId;
 
   @NotNull
   private Long userId;

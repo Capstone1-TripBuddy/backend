@@ -33,9 +33,8 @@ public class GroupPhotoActivityService {
   private final PhotoRepository photoRepository;
   private final UserRepository userRepository;
 
-  // TODO: 최근 1시간 기록만 필터링
-  // TODO: upload의 경우 List<photo>로 묶기(?) -> 애초에 upload 완료후 마지막 한장만 내역에 기록하기
-  public List<ResponseGroupActivity> getGroupRecentActivity(Long groupId) {
+
+  public List<ResponseGroupActivity> getGroupRecentActivity(Long groupId, Long userId) {
     // 현재 시간 기준 1시간 전 시간 계산
     Instant oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS);
 
@@ -45,6 +44,7 @@ public class GroupPhotoActivityService {
     // 스트림 처리
     return history.stream()
         .filter(activity -> activity.getCreatedAt().isAfter(ChronoLocalDateTime.from(oneHourAgo))) // 1시간 이내 필터링
+        .filter(activity -> !activity.getGroupMember().getUser().getId().equals(userId)) // 본인 활동 내역 필터링
         .map(activity -> {
           // User 엔티티 조회
           Optional<User> user = userRepository.findById(activity.getGroupMember().getUser().getId());

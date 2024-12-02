@@ -23,7 +23,7 @@ public class PhotoBookmarkService {
   private final GroupMemberRepository groupMemberRepository;
   private final PhotoRepository photoRepository;
 
-  public void addBookmark(RequestBookmarkDTO request) {
+  public Long addBookmark(RequestBookmarkDTO request) {
     Optional<GroupMember> groupMember = groupMemberRepository.findByGroupIdAndUserId(
         request.getUserId(), request.getGroupId());
     Optional<Photo> groupPhoto = photoRepository.findById(request.getPhotoId());
@@ -32,7 +32,8 @@ public class PhotoBookmarkService {
     }
     PhotoBookmark bookmark = new PhotoBookmark(groupMember.get(), groupPhoto.get());
 
-    photoBookmarkRepository.save(bookmark);
+    PhotoBookmark result = photoBookmarkRepository.save(bookmark);
+    return result.getId();
   }
 
   public void deleteBookmark(Long bookmarkId) {

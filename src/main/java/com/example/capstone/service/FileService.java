@@ -8,15 +8,21 @@ import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.TravelGroup;
 import com.example.capstone.entity.User;
 import com.example.capstone.repository.PhotoRepository;
+import jakarta.validation.ValidationException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,19 +35,23 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class FileService {
 
+  private final PhotoAnalysisService photoAnalysisService;
   @Value("${cloud.aws.s3.bucket}")
   private String bucketName;
 
   private final String rootFolder = "photos/";
+  private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   private final AmazonS3Client s3Client;
   private final PhotoRepository photoRepository;
 
   @Autowired
   public FileService(
-      final PhotoRepository photoRepository, final AmazonS3Client s3Client) {
+      final PhotoRepository photoRepository, final AmazonS3Client s3Client,
+      final PhotoAnalysisService photoAnalysisService) {
     this.photoRepository = photoRepository;
     this.s3Client = s3Client;
+    this.photoAnalysisService = photoAnalysisService;
   }
 
 
@@ -58,9 +68,22 @@ public class FileService {
   }
 
   public String storeProfilePicture(MultipartFile profilePicture)
-      throws IOException {
-    String filePath = generateFilePath(profilePicture, "profile");
-    return storeSingleFile(profilePicture, filePath);
+      throws IOException, ExecutionException, InterruptedException {
+    CompletableFuture<Integer> facesFuture = photoAnalysisService.isValidProfileImage(profilePicture);
+
+    try {
+      // 비동기 작업 결과를 1분까지 기다림 (Timeout 설정 가능)
+      Integer faces = facesFuture.get(1, TimeUnit.MINUTES);
+
+      if (faces == 1) {
+        String filePath = generateFilePath(profilePicture, "profile");
+        return storeSingleFile(profilePicture, filePath);
+      }
+      throw new ValidationException("유효한 프로필 사진이 아닙니다.");
+
+    } catch (TimeoutException e) {
+      throw new ValidationException("프로필 사진 분석에 시간 초과로 실패했습니다.");
+    }
   }
 
   public String storeSingleFile(MultipartFile file, String filePath) throws IOException {
@@ -86,8 +109,8 @@ public class FileService {
 
     List<Long> response = new ArrayList<>();
     for (int i = 0; i < files.size(); i++) {
-      // get when photo is taken
-      Timestamp takenAt = Timestamp.valueOf(LocalDateTime.parse(filesTakenAt.get(i)));
+      // get when photo is takenLocalDateTime.parse(filesTakenAt.get(i), formatter)
+      Timestamp takenAt = Timestamp.valueOf(LocalDateTime.parse(filesTakenAt.get(i), formatter));
       MultipartFile file = files.get(i);
 
       // generate file name

@@ -41,6 +41,7 @@ public class User {
   @Column(name = "profile_picture")
   private String profilePicture;
 
+  @Setter
   @ColumnDefault("CURRENT_TIMESTAMP")
   @Column(name = "created_at")
   private LocalDateTime createdAt;

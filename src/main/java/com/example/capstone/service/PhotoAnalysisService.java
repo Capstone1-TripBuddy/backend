@@ -12,13 +12,19 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,6 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 public class PhotoAnalysisService {
+
+  private static final Logger log = LoggerFactory.getLogger(PhotoAnalysisService.class);
 
   private final GroupPhotoActivityService groupPhotoActivityService;
 
@@ -287,6 +295,18 @@ public class PhotoAnalysisService {
           // 마지막 사진 ID 저장
           lastPhotoId = photoList.get(photoList.size() - 1).getId();
 
+        } catch (RestClientException e) {
+          log.error("Failed to communicate with Python server", e);
+          throw new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to communicate with Python server");
+        } catch (NumberFormatException e) {
+          log.error("Invalid face label format", e);
+          throw new IllegalArgumentException("Invalid face label format", e);
+        } catch (IndexOutOfBoundsException e) {
+          log.error("Invalid index for group member list", e);
+          throw new IndexOutOfBoundsException();
+        } catch (DataAccessException e) {
+          log.error("Database operation failed", e);
+          throw new DataIntegrityViolationException("Database operation failed", e);
         } finally {
           // 필요에 따라 Lock 객체를 제거 (메모리 관리)
           removeLockIfUnused(groupId, lock);
@@ -299,45 +319,39 @@ public class PhotoAnalysisService {
   @Async
   @Transactional(readOnly = true)
   public CompletableFuture<String[]> getImageQuestions(MultipartFile file) throws IOException {
-    try {
-      // RestTemplate 인스턴스 생성
-      RestTemplate restTemplate = new RestTemplate();
+    // RestTemplate 인스턴스 생성
+    RestTemplate restTemplate = new RestTemplate();
 
-      // MultiValueMap 생성
-      MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-      body.add("image", new ByteArrayResource(file.getBytes()) {
-        @Override
-        public String getFilename() {
-          return file.getOriginalFilename(); // 파일 이름 설정
-        }
-      });
-
-      // 헤더 설정
-      HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-      // HttpEntity 생성
-      HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-
-      // POST 요청 보내고 String[]로 응답 받기
-      ResponseEntity<String[]> response = restTemplate.exchange(
-          pythonServerUrl + "process_photos/questions",
-          HttpMethod.POST,
-          requestEntity,
-          String[].class
-      );
-
-      // 응답 상태 확인
-      if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
-        throw new RuntimeException("Response Error");
+    // MultiValueMap 생성
+    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+    body.add("image", new ByteArrayResource(file.getBytes()) {
+      @Override
+      public String getFilename() {
+        return file.getOriginalFilename(); // 파일 이름 설정
       }
+    });
 
-      return CompletableFuture.completedFuture(response.getBody());
+    // 헤더 설정
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-    } catch (IOException | IllegalStateException e) {
-      e.printStackTrace();
-      throw e;
+    // HttpEntity 생성
+    HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+    // POST 요청 보내고 String[]로 응답 받기
+    ResponseEntity<String[]> response = restTemplate.exchange(
+        pythonServerUrl + "process_photos/questions",
+        HttpMethod.POST,
+        requestEntity,
+        String[].class
+    );
+
+    // 응답 상태 확인
+    if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+      throw new RuntimeException("Response Error");
     }
+
+    return CompletableFuture.completedFuture(response.getBody());
   }
 
   public void uploadPhotosAndProcess(long groupId, long userId, boolean processAllPhotos) {

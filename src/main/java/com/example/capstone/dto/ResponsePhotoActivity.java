@@ -14,21 +14,28 @@ import lombok.Setter;
 @Setter
 public class ResponsePhotoActivity {
 
+  Long photoId;
+
   Integer totalBookmarks;
 
   Integer totalReplies;
 
-  List<PhotoReply> photoReplies;
+  List<ResponseBookmarkDTO> photoBookmarks;
 
-  List<PhotoQuestion> photoQuestions;
+  List<ResponseReplyDTO> photoReplies;
+
+  List<ResponseQuestionDTO> photoQuestions;
 
   public static ResponsePhotoActivity fromEntity(
-      List<PhotoBookmark> photoBookmarks,
-      List<PhotoReply> photoReplies,
-      List<PhotoQuestion> photoQuestions) {
+      Long photoId,
+      List<ResponseBookmarkDTO> photoBookmarks,
+      List<ResponseReplyDTO> photoReplies,
+      List<ResponseQuestionDTO> photoQuestions) {
     ResponsePhotoActivity responsePhotoActivity = new ResponsePhotoActivity();
+    responsePhotoActivity.photoId = photoId;
     responsePhotoActivity.totalBookmarks = photoBookmarks.size();
     responsePhotoActivity.totalReplies = photoReplies.size();
+    responsePhotoActivity.photoBookmarks = photoBookmarks;
     responsePhotoActivity.photoReplies = photoReplies;
     responsePhotoActivity.photoQuestions = photoQuestions;
     return responsePhotoActivity;

@@ -85,6 +85,7 @@ public class UserService {
   }
 
   // Update user details
+  /*
   public Optional<User> updateUser(Long id, User updatedUser) {
     return userRepository.findById(id).map(existingUser -> {
       User updated = new User(
@@ -98,6 +99,8 @@ public class UserService {
       return userRepository.save(updated);
     });
   }
+
+   */
 
   // Delete user by ID
   public boolean deleteUser(Long id) {

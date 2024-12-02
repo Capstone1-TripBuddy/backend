@@ -9,6 +9,8 @@ public class ResponseGroupActivity {
 
   private Long userId;
 
+  private String userName;
+
   private Long photoId;
 
   private String activityType;
@@ -19,6 +21,7 @@ public class ResponseGroupActivity {
       LocalDateTime createdAt) {
     ResponseGroupActivity responseGroupActivity = new ResponseGroupActivity();
     responseGroupActivity.userId = user.getId();
+    responseGroupActivity.userName = user.getName();
     responseGroupActivity.photoId = photo.getId();
     responseGroupActivity.activityType = activityType.getName();
     responseGroupActivity.createdAt = createdAt;

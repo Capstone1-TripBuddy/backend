@@ -5,6 +5,7 @@ import com.example.capstone.entity.TravelGroup;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 public interface PhotoRepository extends JpaRepository<Photo, Long> {
 
@@ -15,4 +16,5 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
   List<Photo> findAllByGroup(TravelGroup group);
 
   List<Photo> findAllByGroupAndAnalyzedAtIsNull(TravelGroup group);
+
 }

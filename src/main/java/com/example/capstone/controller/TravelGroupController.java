@@ -31,11 +31,24 @@ public class TravelGroupController {
 
   // Create a new travel group
   @PostMapping
-  public ResponseEntity<ResponseTravelGroupDTO> createGroup(@RequestBody RequestTravelGroupDTO travelGroupDTO) {
-    Optional<ResponseTravelGroupDTO> createdGroup = travelGroupService.createGroup(travelGroupDTO);
-    return createdGroup.map(
-            responseTravelGroupDTO -> new ResponseEntity<>(responseTravelGroupDTO, HttpStatus.CREATED))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+  public ResponseEntity<ResponseTravelGroupDTO> createGroup(
+      @RequestBody RequestTravelGroupDTO request) {
+    // 그룹 생성
+    Optional<ResponseTravelGroupDTO> createdGroup = travelGroupService.createGroup(request);
+    if (createdGroup.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
+    // 그룹 멤버에 추가
+    RequestGroupMemberDTO addGroupMember = RequestGroupMemberDTO.createResponseTravelGroupDTO(
+        request.getCreatorId(),
+        createdGroup.get().getInviteCode()
+    );
+    Optional<ResponseTravelGroupDTO> response = travelGroupService.joinGroupByInviteCode(
+        addGroupMember);
+    return response.map(responseTravelGroupDTO -> ResponseEntity.status(HttpStatus.CREATED)
+            .body(responseTravelGroupDTO))
+        .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
   }
 
   @GetMapping("/{userId}")

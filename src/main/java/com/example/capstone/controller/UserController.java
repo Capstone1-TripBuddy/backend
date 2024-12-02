@@ -11,10 +11,12 @@ import com.example.capstone.service.UserService;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -33,10 +35,16 @@ public class UserController {
   @Autowired
   private UserRepository userRepository;
 
+  @GetMapping("/example")
+  public ResponseEntity<String> getExample() {
+    String response = "한글 테스트";
+    return ResponseEntity.ok().body(response);
+  }
+
   // 회원가입
   @PostMapping("/signup")
   public ResponseEntity<Void> signup(@ModelAttribute @Valid RequestSignupUserDTO request)
-      throws IOException {
+      throws IOException, ExecutionException, InterruptedException {
     String profilePath = fileService.storeProfilePicture(request.getProfilePicture());
     Optional<User> createdUser = userService.createUser(request, profilePath);
     if (createdUser.isEmpty()) {
@@ -58,7 +66,7 @@ public class UserController {
 
   @PostMapping("/profile")
   public ResponseEntity<Void> updateProfile(@ModelAttribute @Valid RequestUpdateProfileDTO request)
-      throws NotFoundException, IOException {
+      throws NotFoundException, IOException, ExecutionException, InterruptedException {
     String profilePath = fileService.storeProfilePicture(request.getProfilePicture());
     Optional<User> updatedUser = userService.updateUserProfile(request, profilePath);
     if (updatedUser.isEmpty()) {

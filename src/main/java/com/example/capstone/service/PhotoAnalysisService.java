@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -28,14 +29,15 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 public class PhotoAnalysisService {
+
   private final TravelGroupRepository travelGroupRepository;
   private final GroupMemberRepository groupMemberRepository;
   private final PhotoRepository photoRepository;
   private final AlbumRepository albumRepository;
   private final AlbumPhotoRepository albumPhotoRepository;
   private final ConcurrentHashMap<Long, Object> lockMap = new ConcurrentHashMap<>();
-  private final String pythonServerUrl = "http://127.0.0.1:8000/";
-  private final String dataServerRootUrl = "https://photo-bucket-012.s3.ap-northeast-2.amazonaws.com/";
+  public final static String pythonServerUrl = "http://127.0.0.1:8000/";
+  private final static String dataServerRootUrl = "https://photo-bucket-012.s3.ap-northeast-2.amazonaws.com/";
 
   public static HashMap<String, String> map;
   static {
@@ -60,13 +62,13 @@ public class PhotoAnalysisService {
   }
 
   /**
-   * 프로필 사진이 이용하기 적절한지 판단한다.
-   * 프로필 사진 속에는 얼굴이 하나만 있어야 한다.
+   * 프로필 사진이 이용하기 적절한지 판단한다. 프로필 사진 속에는 얼굴이 하나만 있어야 한다.
+   *
    * @param file 사진 파일
    * @return 사진 속 얼굴 수
    */
   @Async
-  public int isValidProfileImage(MultipartFile file) throws IOException {
+  public CompletableFuture<Integer> isValidProfileImage(MultipartFile file) throws IOException {
     try {
       // RestTemplate 인스턴스 생성
       RestTemplate restTemplate = new RestTemplate();
@@ -101,7 +103,7 @@ public class PhotoAnalysisService {
       }
 
       PhotoFaceDto[] faceData = response.getBody();
-      return faceData.length;
+      return CompletableFuture.completedFuture(faceData.length);
 
     } catch (IOException | IllegalStateException e) {
       e.printStackTrace();
@@ -202,6 +204,8 @@ public class PhotoAnalysisService {
     synchronized (lock) {
       try {
         // 현재 Group의 얼굴 데이터를 가져오기
+        // TODO: 이미 분석되어 프로필이 유효한 경우에만 사용자 등록되므로 analyzedAt 필드 삭제 됨
+        // TODO: 로직 수정 필요
         List<Photo> photoList;
         if (processAllPhotos) {
           photoList = photoRepository.findAllByGroup(group);
@@ -255,7 +259,8 @@ public class PhotoAnalysisService {
           for (int j = 0, lf = facesData == null ? 0 : facesData.length; j < lf; j++) {
             PhotoFaceDto faceData = facesData[j];
             if (faceData.getLabel() != null) {
-              int idx = Integer.getInteger(faceData.getLabel());
+              //int idx = Integer.getInteger(faceData.getLabel()); //debug
+              int idx = Integer.parseInt(faceData.getLabel());
               User user = groupMemberList.get(idx).getUser();
 
               String title = user.getName();
@@ -280,12 +285,19 @@ public class PhotoAnalysisService {
       } finally {
         // 필요에 따라 Lock 객체를 제거 (메모리 관리)
         removeLockIfUnused(groupId, lock);
+
+        // TODO:  upload (분류 완료) 내역 남김
+        /*
+        Long lastPhotoId = photoList.get(result.size() - 1);
+        groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), lastPhotoId,
+            "upload");
+         */
       }
     }
   }
 
   @Transactional(readOnly = true)
-  public String[] getImageQueations(MultipartFile file) throws IOException {
+  public CompletableFuture<String[]> getImageQuestions(MultipartFile file) throws IOException {
     try {
       // RestTemplate 인스턴스 생성
       RestTemplate restTemplate = new RestTemplate();
@@ -319,11 +331,12 @@ public class PhotoAnalysisService {
         throw new RuntimeException("Response Error");
       }
 
-      return response.getBody();
+      return CompletableFuture.completedFuture(response.getBody());
 
     } catch (IOException | IllegalStateException e) {
       e.printStackTrace();
       throw e;
     }
   }
+
 }

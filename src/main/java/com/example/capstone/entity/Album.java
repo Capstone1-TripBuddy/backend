@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -36,7 +37,7 @@ public class Album {
   @JoinColumn(name = "group_id", nullable = false)
   private TravelGroup group;
 
-  @Column(name = "title", nullable = false)
+  @Column(name = "title", nullable = false, length = 255)
   private String title;
 
   @Lob
@@ -51,5 +52,13 @@ public class Album {
     this.group = travelGroup;
     this.title = albumTitle;
     this.description = albumDescription;
+  }
+
+  @PrePersist
+  public void checkTitle() {
+    if (this.title == null || this.title.isEmpty()) {
+      // 로그를 남기거나 예외를 발생시키는 등의 처리를 수행합니다.
+      System.out.println("Album title is null or empty!");
+    }
   }
 }

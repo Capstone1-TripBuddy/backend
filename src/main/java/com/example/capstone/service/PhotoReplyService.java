@@ -22,7 +22,7 @@ public class PhotoReplyService {
   private final UserRepository userRepository;
   private final PhotoRepository photoRepository;
 
-  public void addReply(RequestReplyDTO request) {
+  public Long addReply(RequestReplyDTO request) {
     Optional<User> user = userRepository.findById(request.getUserId());
     Optional<Photo> photo = photoRepository.findById(request.getPhotoId());
     if (user.isEmpty() || photo.isEmpty()) {
@@ -34,7 +34,8 @@ public class PhotoReplyService {
         photo.get(),
         request.getContent()
     );
-    photoReplyRepository.save(reply);
+    PhotoReply result = photoReplyRepository.save(reply);
+    return result.getId();
   }
 
   public void deleteReply(Long replyId) {

@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import java.util.stream.Collectors;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpServerErrorException;
 
 @RestController
 @RequestMapping("/api/albums")
@@ -44,7 +46,6 @@ public class AlbumController {
   private final AlbumService albumService;
   private final UserService userService;
   private final TravelGroupService travelGroupService;
-  private final GroupPhotoActivityService groupPhotoActivityService;
   private final PhotoAnalysisService photoAnalysisService;
   private final GroupMemberService groupMemberService;
   private final PhotoQuestionService photoQuestionService;
@@ -58,7 +59,6 @@ public class AlbumController {
     this.albumService = albumService;
     this.userService = userService;
     this.travelGroupService = travelGroupService;
-    this.groupPhotoActivityService = groupPhotoActivityService;
     this.photoAnalysisService = photoAnalysisService;
     this.groupMemberService = groupMemberService;
     this.photoQuestionService = photoQuestionService;
@@ -75,7 +75,7 @@ public class AlbumController {
    */
   @PostMapping("/upload")
   public ResponseEntity<Void> uploadPhotos(@ModelAttribute RequestPhotoDTO request)
-      throws IOException, NotFoundException {
+      throws IOException {
     Optional<User> user = userService.findUserById(request.getUserId());
     Optional<TravelGroup> travelGroup = travelGroupService.findGroupById(request.getGroupId());
     if (user.isEmpty() || travelGroup.isEmpty()) {
@@ -86,7 +86,7 @@ public class AlbumController {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    // photoAnalysisService.uploadPhotosAndProcess 호출
+    // 비동기식 이미지 분류 프로세스 호출
     photoAnalysisService.uploadPhotosAndProcess(
         request.getGroupId(),
         request.getUserId(),
@@ -109,17 +109,6 @@ public class AlbumController {
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
-  /*
-  @GetMapping("/{groupId}")
-  public ResponseEntity<Page<ResponsePhotoDTO>> getAllGroupAlbums(@PathVariable Long groupId, @PathVariable Integer page) {
-    Page<ResponsePhotoDTO> response = albumService.findAllGroupAlbumPhotos(groupId, page);
-    if (response.isEmpty()) {
-      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
-    }
-    return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
-  }
-  */
-
   @GetMapping("/{groupId}/{page}")
   public ResponseEntity<Page<ResponsePhotoDTO>> getAllGroupPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
     Page<ResponsePhotoDTO> response = albumService.findAllGroupAlbumPhotos(groupId, page);
@@ -139,9 +128,18 @@ public class AlbumController {
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
-  @GetMapping("/{groupId}/sight/{page}")
-  public ResponseEntity<Page<ResponsePhotoDTO>> getSightPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
-    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "sight", page);
+  @GetMapping("/{groupId}/nature/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getNaturePhotos(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "자연", page);
+    if (response.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<>(response, HttpStatus.OK);
+  }
+
+  @GetMapping("/{groupId}/city/{page}")
+  public ResponseEntity<Page<ResponsePhotoDTO>> getCityPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "도시", page);
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -150,7 +148,7 @@ public class AlbumController {
 
   @GetMapping("/{groupId}/food/{page}")
   public ResponseEntity<Page<ResponsePhotoDTO>> getFoodPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
-    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "food", page);
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "음식", page);
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -159,7 +157,7 @@ public class AlbumController {
 
   @GetMapping("/{groupId}/animal/{page}")
   public ResponseEntity<Page<ResponsePhotoDTO>> getAnimalPhotos(@PathVariable Long groupId, @PathVariable Integer page) {
-    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "animal", page);
+    Page<ResponsePhotoDTO> response = albumService.findGroupAlbumPhotosByTitle(groupId, "동물", page);
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -173,14 +171,15 @@ public class AlbumController {
     return response.orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
   }
 
-  @ExceptionHandler(NoSuchElementException.class)
+  @ExceptionHandler({NoSuchElementException.class, IllegalArgumentException.class, IndexOutOfBoundsException.class})
   ResponseEntity<String> handleBadSearchRequest(Exception e) {
     return ResponseEntity.badRequest().body(e.getMessage());
   }
 
-  @ExceptionHandler(IOException.class)
-  ResponseEntity<String> handleBadSignupRequest(Exception e) {
-    return ResponseEntity.badRequest().body(e.getMessage());
+  @ExceptionHandler({IOException.class, HttpServerErrorException.class,
+      DataIntegrityViolationException.class})
+  ResponseEntity<String> handleInputOutputFailureRequest(Exception e) {
+    return ResponseEntity.internalServerError().body(e.getMessage());
   }
 }
 

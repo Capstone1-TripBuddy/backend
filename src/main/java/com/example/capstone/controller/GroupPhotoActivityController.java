@@ -112,6 +112,11 @@ public class GroupPhotoActivityController {
   */
   @GetMapping("/photo/{photoId}")
   public ResponseEntity<ResponsePhotoActivity> getGroupPhotoActivity(@PathVariable Long photoId) {
+    Optional<Photo> photo = photoRepository.findById(photoId);
+    if (photo.isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+
     List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
         .map((bookmark) -> new ResponseBookmarkDTO(
             bookmark.getId(), bookmark.getGroupMember().getUser().getId(), bookmark.getCreatedAt())).toList();
@@ -122,7 +127,8 @@ public class GroupPhotoActivityController {
     List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
         .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
 
-    ResponsePhotoActivity response = ResponsePhotoActivity.fromEntity(photoId, bookmarks, replies, questions);
+    ResponsePhotoActivity response = ResponsePhotoActivity.fromEntity(
+        photoId, photo.get().getFilePath(), bookmarks, replies, questions);
     return ResponseEntity.ok(response);
   }
 
@@ -142,6 +148,7 @@ public class GroupPhotoActivityController {
     List<ResponsePhotoActivity> response = new ArrayList<>();
     for (Photo photo : photos) {
       Long photoId = photo.getId();
+
       List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
           .map((bookmark) -> new ResponseBookmarkDTO(
               bookmark.getId(), bookmark.getGroupMember().getUser().getId(), bookmark.getCreatedAt())).toList();
@@ -152,7 +159,7 @@ public class GroupPhotoActivityController {
       List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
           .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
 
-      ResponsePhotoActivity result = ResponsePhotoActivity.fromEntity(photoId, bookmarks, replies, questions);
+      ResponsePhotoActivity result = ResponsePhotoActivity.fromEntity(photoId, photo.getFilePath(), bookmarks, replies, questions);
       response.add(result);
     }
 

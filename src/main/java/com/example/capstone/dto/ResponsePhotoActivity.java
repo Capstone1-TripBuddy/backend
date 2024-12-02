@@ -16,6 +16,8 @@ public class ResponsePhotoActivity {
 
   Long photoId;
 
+  String photoUrl;
+
   Integer totalBookmarks;
 
   Integer totalReplies;
@@ -27,12 +29,13 @@ public class ResponsePhotoActivity {
   List<ResponseQuestionDTO> photoQuestions;
 
   public static ResponsePhotoActivity fromEntity(
-      Long photoId,
+      Long photoId, String photoUrl,
       List<ResponseBookmarkDTO> photoBookmarks,
       List<ResponseReplyDTO> photoReplies,
       List<ResponseQuestionDTO> photoQuestions) {
     ResponsePhotoActivity responsePhotoActivity = new ResponsePhotoActivity();
     responsePhotoActivity.photoId = photoId;
+    responsePhotoActivity.photoUrl = photoUrl;
     responsePhotoActivity.totalBookmarks = photoBookmarks.size();
     responsePhotoActivity.totalReplies = photoReplies.size();
     responsePhotoActivity.photoBookmarks = photoBookmarks;

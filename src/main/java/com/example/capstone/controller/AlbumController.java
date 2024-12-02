@@ -86,21 +86,16 @@ public class AlbumController {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    // 그룹에 새로운 멤버 여부 확인 (멤버 이름의 앨범이 그룹에 존재하는 지 확인)
-    // 얼굴 인식 및 처리
-    photoAnalysisService.processImagesFaces(request.getGroupId(),
-        !groupMemberService.isAllProfilePictureAnalyzed(request.getGroupId()));
-
-    // 비동기식 사진 카테고리 분류 메소드 호출
-    photoAnalysisService.processImagesTypes(request.getGroupId());
+    // photoAnalysisService.uploadPhotosAndProcess 호출
+    photoAnalysisService.uploadPhotosAndProcess(
+        request.getGroupId(),
+        request.getUserId(),
+        groupMemberService.hasNewMemberByAlbum(request.getGroupId())
+    );
 
     // 비동기식 사진 AI 질문 생성 메소드 호출
     photoQuestionService.generateQuestions(result);
 
-    // upload (분류 완료) 내역 남김
-    Long lastPhotoId = result.get(result.size() - 1);
-    groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), lastPhotoId,
-        "upload");
     return new ResponseEntity<>(HttpStatus.OK);
   }
 

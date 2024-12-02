@@ -57,26 +57,33 @@ public class GroupMemberService {
         .collect(Collectors.toList());
   }
 
-  public boolean isAllProfilePictureAnalyzed(Long groupId) throws NotFoundException {
-    Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
-    List<User> users = getAllGroupMembersByGroupId(groupId);
+  /**
+   * 앨범 정보를 활용하여 새로운 멤버가 있는지 확인합니다.
+   * @param groupId 그룹 ID
+   * @return 새로운 멤버가 있는지 여부
+   */
+  public boolean hasNewMemberByAlbum(Long groupId) {
+    // 앨범 제목 목록 가져오기
+    List<String> albumTitles = albumRepository.findAllByGroupId(groupId)
+        .stream()
+        .map(Album::getTitle)
+        .toList();
 
-    // 그룹에 속한 유저들이 없다면 NotFoundException 던지기
-    if (users.isEmpty() || travelGroup.isEmpty()) {
-      throw new NotFoundException();
-    }
+    // 그룹 멤버 이름 목록 가져오기
+    List<String> memberNames = groupMemberRepository.findByGroupId(groupId)
+        .stream()
+        .map(groupMember -> groupMember.getUser().getName())
+        .toList();
 
-    // 유저 중 하나라도 프로필 사진이 분석되지 않았다면 false 반환
-    for (User user : users) {
-      String userName = user.getName();
-      Optional<Album> userAlbum = albumRepository.findByGroupAndTitle(travelGroup.get(), userName);
-      if (userAlbum.isEmpty()) {
-        return false;  // 하나라도 분석되지 않았다면 false
+    // 앨범 제목 목록과 멤버 이름 목록 비교
+    for (String memberName : memberNames) {
+      if (!albumTitles.contains(memberName)) {
+        // 멤버 이름과 일치하는 앨범 제목이 없으면 새로운 멤버
+        return true;
       }
     }
-
-    // 모든 유저의 프로필 사진이 분석된 경우
-    return true;
+    // 모든 멤버 이름과 일치하는 앨범 제목이 있으면 새로운 멤버 없음
+    return false;
   }
 
 

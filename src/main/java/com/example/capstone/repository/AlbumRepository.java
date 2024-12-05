@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AlbumRepository extends JpaRepository<Album, Long> {
 
-  Album findByGroupIdAndTitle(final Long group_id, final String title);
+  Optional<Album> findByGroupIdAndTitle(final Long group_id, final String title);
 
   List<Album> findAllByGroupId(final Long groupId);
 

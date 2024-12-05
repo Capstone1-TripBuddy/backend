@@ -40,7 +40,8 @@ public class FileService {
   private String bucketName;
 
   private final String rootFolder = "photos/";
-  private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  //private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  //private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
   private final AmazonS3Client s3Client;
   private final PhotoRepository photoRepository;
@@ -96,7 +97,7 @@ public class FileService {
     try (InputStream inputStream = file.getInputStream()) {
       s3Client.putObject(new PutObjectRequest(bucketName, filePath, inputStream, metadata));
     } catch (IOException e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "PhotoService: " + e);
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "FileService: storeSingleFile: " + e);
     }
 
     return filePath;
@@ -104,13 +105,14 @@ public class FileService {
 
   public List<Long> storeFiles(User user, TravelGroup travelGroup, List<MultipartFile> files, List<String> filesTakenAt) throws IOException {
     if (files.size() != filesTakenAt.size()) {
-      throw new BadRequestException(String.format("PhotoService: %d != %d", files.size(), filesTakenAt.size()));
+      System.out.println(filesTakenAt);
+      throw new BadRequestException(String.format("FileService: storeFiles: file size %d != takenAt size %d", files.size(), filesTakenAt.size()));
     }
 
     List<Long> response = new ArrayList<>();
     for (int i = 0; i < files.size(); i++) {
       // get when photo is takenLocalDateTime.parse(filesTakenAt.get(i), formatter)
-      Timestamp takenAt = Timestamp.valueOf(LocalDateTime.parse(filesTakenAt.get(i), formatter));
+      Timestamp takenAt = Timestamp.valueOf(LocalDateTime.parse(filesTakenAt.get(i), DateTimeFormatter.ISO_LOCAL_DATE_TIME));
       MultipartFile file = files.get(i);
 
       // generate file name

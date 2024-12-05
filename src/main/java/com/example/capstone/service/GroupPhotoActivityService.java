@@ -12,6 +12,8 @@ import com.example.capstone.repository.PhotoActivityTypeRepository;
 import com.example.capstone.repository.PhotoRepository;
 import com.example.capstone.repository.UserRepository;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.chrono.ChronoLocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
@@ -38,12 +40,16 @@ public class GroupPhotoActivityService {
     // 현재 시간 기준 1시간 전 시간 계산
     Instant oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS);
 
+    // Instant를 LocalDateTime으로 변환 (ZoneId.systemDefault()을 사용하여 시스템 기본 시간대 적용)
+    LocalDateTime oneHourAgoLocalDateTime = LocalDateTime.ofInstant(oneHourAgo, ZoneId.systemDefault());
+
+
     // 그룹 ID에 해당하는 활동 리스트 조회
     List<GroupPhotoActivity> history = groupPhotoActivityRepository.findByGroupMemberGroupId(groupId);
 
     // 스트림 처리
     return history.stream()
-        .filter(activity -> activity.getCreatedAt().isAfter(ChronoLocalDateTime.from(oneHourAgo))) // 1시간 이내 필터링
+        .filter(activity -> activity.getCreatedAt().isAfter(oneHourAgoLocalDateTime)) // 1시간 이내 필터링
         .filter(activity -> !activity.getGroupMember().getUser().getId().equals(userId)) // 본인 활동 내역 필터링
         .map(activity -> {
           // User 엔티티 조회

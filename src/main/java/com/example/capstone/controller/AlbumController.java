@@ -3,6 +3,7 @@ package com.example.capstone.controller;
 import com.example.capstone.dto.RequestPhotoDTO;
 import com.example.capstone.dto.ResponseAlbumDTO;
 import com.example.capstone.dto.ResponsePhotoDTO;
+import com.example.capstone.entity.Album;
 import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.TravelGroup;
 import com.example.capstone.entity.User;
@@ -16,6 +17,8 @@ import com.example.capstone.service.PhotoQuestionService;
 import com.example.capstone.service.TravelGroupService;
 import com.example.capstone.service.UserService;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -25,7 +28,9 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,6 +47,8 @@ import org.springframework.web.client.HttpServerErrorException;
 @RequestMapping("/api/albums")
 public class AlbumController {
 
+  MediaType mediaType = new MediaType("application", "json", StandardCharsets.UTF_8);
+
   private final FileService fileService;
   private final AlbumService albumService;
   private final UserService userService;
@@ -52,7 +59,6 @@ public class AlbumController {
 
   public AlbumController(FileService fileService, AlbumService albumService,
       final UserService userService, final TravelGroupService travelGroupService,
-      final GroupPhotoActivityService groupPhotoActivityService,
       final PhotoAnalysisService photoAnalysisService, final GroupMemberService groupMemberService,
       final PhotoQuestionService photoQuestionService) {
     this.fileService = fileService;
@@ -115,7 +121,10 @@ public class AlbumController {
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    return new ResponseEntity<>(response, HttpStatus.OK);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   @GetMapping("/{groupId}/{userId}/{page}")
@@ -125,7 +134,9 @@ public class AlbumController {
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    return new ResponseEntity<>(response, HttpStatus.OK);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   @GetMapping("/{groupId}/nature/{page}")
@@ -134,7 +145,9 @@ public class AlbumController {
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    return new ResponseEntity<>(response, HttpStatus.OK);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   @GetMapping("/{groupId}/city/{page}")
@@ -143,7 +156,9 @@ public class AlbumController {
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    return new ResponseEntity<>(response, HttpStatus.OK);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   @GetMapping("/{groupId}/food/{page}")
@@ -152,7 +167,9 @@ public class AlbumController {
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    return new ResponseEntity<>(response, HttpStatus.OK);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   @GetMapping("/{groupId}/animal/{page}")
@@ -161,7 +178,9 @@ public class AlbumController {
     if (response.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
-    return new ResponseEntity<>(response, HttpStatus.OK);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   @GetMapping("/{groupId}/{albumName}/download")
@@ -173,13 +192,17 @@ public class AlbumController {
 
   @ExceptionHandler({NoSuchElementException.class, IllegalArgumentException.class, IndexOutOfBoundsException.class})
   ResponseEntity<String> handleBadSearchRequest(Exception e) {
-    return ResponseEntity.badRequest().body(e.getMessage());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.badRequest().headers(headers).body(e.getMessage());
   }
 
   @ExceptionHandler({IOException.class, HttpServerErrorException.class,
       DataIntegrityViolationException.class})
   ResponseEntity<String> handleInputOutputFailureRequest(Exception e) {
-    return ResponseEntity.internalServerError().body(e.getMessage());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.internalServerError().headers(headers).body(e.getMessage());
   }
 }
 

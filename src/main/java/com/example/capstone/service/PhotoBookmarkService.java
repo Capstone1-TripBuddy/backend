@@ -25,11 +25,15 @@ public class PhotoBookmarkService {
 
   public Long addBookmark(RequestBookmarkDTO request) {
     Optional<GroupMember> groupMember = groupMemberRepository.findByGroupIdAndUserId(
-        request.getUserId(), request.getGroupId());
+        request.getGroupId(), request.getUserId());
     Optional<Photo> groupPhoto = photoRepository.findById(request.getPhotoId());
-    if (groupMember.isEmpty() || groupPhoto.isEmpty()) {
-      throw new NoSuchElementException();
+    if (groupMember.isEmpty()) {
+      throw new IllegalStateException("Group member not found for the given userId and groupId.");
     }
+    if (groupPhoto.isEmpty()) {
+      throw new IllegalStateException("Photo not found for the given photoId.");
+    }
+
     PhotoBookmark bookmark = new PhotoBookmark(groupMember.get(), groupPhoto.get());
 
     PhotoBookmark result = photoBookmarkRepository.save(bookmark);

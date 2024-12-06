@@ -12,9 +12,8 @@ import lombok.NoArgsConstructor;
 public class ResponsePhotoDTO {
 
   private Long photoId;
-  private String fileName;
   private String fileUrl;
-  private Long imageSize;
   private LocalDateTime uploadDate;
+  // private Integer totalPages;
 
 }

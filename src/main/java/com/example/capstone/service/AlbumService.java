@@ -35,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AlbumService {
 
-  private final Integer pageSize = 12;
+  private final Integer pageSize = 6;
 
   private final TravelGroupRepository travelGroupRepository;
   private final  AlbumRepository albumRepository;
@@ -103,9 +103,7 @@ public class AlbumService {
       Photo photo = albumPhoto.getPhoto();
       return new ResponsePhotoDTO(
           photo.getId(),
-          photo.getFileName(),
           photo.getFilePath(),
-          photo.getImageSize(),
           photo.getUploadedAt());
     });
   }
@@ -113,16 +111,13 @@ public class AlbumService {
 
   // 그룹의 특정 앨범의 전체 사진(url) 조회
   public Page<ResponsePhotoDTO> findGroupAlbumPhotosByTitle(Long groupId, String albumTitle, Integer page) {
-    Optional<Album> album = getGroupAlbumByTitle(groupId, albumTitle);
-    if (album.isEmpty()) {
-      throw new NoSuchElementException("No album found for title: " + albumTitle);
-    }
+    Album album = getGroupAlbumByTitle(groupId, albumTitle);
 
     // Pageable 객체 생성
     Pageable pageable = PageRequest.of(page, pageSize);
 
     // 페이징 처리된 AlbumPhoto 데이터 조회
-    Page<AlbumPhoto> pagedAlbumPhotos = albumPhotoRepository.findByAlbumId(album.get().getId(), pageable);
+    Page<AlbumPhoto> pagedAlbumPhotos = albumPhotoRepository.findByAlbumId(album.getId(), pageable);
     if (pagedAlbumPhotos.isEmpty()) {
       throw new NoSuchElementException("No photos found for this album: " + albumTitle);
     }
@@ -132,9 +127,7 @@ public class AlbumService {
       Photo photo = albumPhoto.getPhoto();
       return new ResponsePhotoDTO(
           photo.getId(),
-          photo.getFileName(),
           photo.getFilePath(),
-          photo.getImageSize(),
           photo.getUploadedAt());
     });
   }
@@ -151,13 +144,10 @@ public class AlbumService {
   }
 
   // 그룹의 특정 앨범의 전체 사진 zip 다운로드
-  public Optional<ResponseEntity<ByteArrayResource>> zipAlbum(Long groupId, String albumTitle) throws IOException {
-    Optional<Album> album = getGroupAlbumByTitle(groupId, albumTitle);
-    if (album.isEmpty()) {
-      return Optional.empty();
-    }
+  public Optional<ResponseEntity<ByteArrayResource>> zipAlbum(Long groupId, String albumName) throws IOException {
+    Album album = getGroupAlbumByTitle(groupId, albumName);
 
-    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumId(album.get().getId());
+    List<AlbumPhoto> albumPhotos = albumPhotoRepository.findByAlbumId(album.getId());
     if (albumPhotos.isEmpty()) {
       return Optional.empty();
     }
@@ -177,7 +167,7 @@ public class AlbumService {
     zipOut.close();
 
     HttpHeaders headers = new HttpHeaders();
-    headers.add("Content-Disposition", "attachment; filename=images.zip");
+    headers.add("Content-Disposition", String.format("attachment; filename=%s.zip", albumName));
     headers.add("Content-Type", "application/zip");
 
     return Optional.of(ResponseEntity.ok()
@@ -186,14 +176,17 @@ public class AlbumService {
   }
 
   // 그룹의 특정 앨범 엔티티 조회
-  private Optional<Album> getGroupAlbumByTitle(Long groupId, String albumTitle) {
+  private Album getGroupAlbumByTitle(Long groupId, String albumTitle) {
     Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
     if (travelGroup.isEmpty()) {
-      return Optional.empty();
+      throw new NoSuchElementException("No travel group found for id: " + groupId);
     }
 
-    Album album = albumRepository.findByGroupIdAndTitle(groupId, albumTitle);
-    return Optional.of(album);
+    Optional<Album> album = albumRepository.findByGroupIdAndTitle(groupId, albumTitle);
+    if (album.isEmpty()) {
+      throw new NoSuchElementException("No album found for title: " + albumTitle);
+    }
+    return album.get();
   }
 
 }

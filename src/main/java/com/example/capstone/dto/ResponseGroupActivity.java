@@ -4,7 +4,14 @@ import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.PhotoActivityType;
 import com.example.capstone.entity.User;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
 public class ResponseGroupActivity {
 
   private Long userId;

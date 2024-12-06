@@ -10,11 +10,13 @@ import com.example.capstone.service.FileService;
 import com.example.capstone.service.UserService;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+  MediaType mediaType = new MediaType("application", "json", StandardCharsets.UTF_8);
 
   @Autowired
   private UserService userService;
@@ -61,7 +65,9 @@ public class UserController {
       throws NotFoundException, BadRequestException {
     ResponseUserDTO validatedUser = userService.validateUser(user);
 
-    return new ResponseEntity<>(validatedUser, HttpStatus.OK);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(validatedUser);
   }
 
   @PostMapping("/profile")
@@ -79,6 +85,8 @@ public class UserController {
 
   @ExceptionHandler({MethodArgumentNotValidException.class, NotFoundException.class, BadRequestException.class})
   ResponseEntity<String> handleBadSignupRequest(Exception e) {
-    return ResponseEntity.badRequest().body(e.getMessage());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.badRequest().headers(headers).body(e.getMessage());
   }
 }

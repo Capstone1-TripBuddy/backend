@@ -8,6 +8,7 @@ import com.example.capstone.dto.ResponseGroupActivity;
 import com.example.capstone.dto.ResponsePhotoActivity;
 import com.example.capstone.dto.ResponseQuestionDTO;
 import com.example.capstone.dto.ResponseReplyDTO;
+import com.example.capstone.entity.GroupPhotoActivity;
 import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.PhotoBookmark;
 import com.example.capstone.entity.TravelGroup;
@@ -18,13 +19,19 @@ import com.example.capstone.service.PhotoBookmarkService;
 import com.example.capstone.service.PhotoQuestionService;
 import com.example.capstone.service.PhotoReplyService;
 import jakarta.validation.Valid;
+import jakarta.validation.ValidationException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +45,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/activity")
 public class GroupPhotoActivityController {
+
+  MediaType mediaType = new MediaType("application", "json", StandardCharsets.UTF_8);
 
   private final PhotoBookmarkService photoBookmarkService;
   private final PhotoReplyService photoReplyService;
@@ -74,14 +83,24 @@ public class GroupPhotoActivityController {
 
   // 사용자 여행 그룹별 북마크 조회
   @GetMapping("/bookmark/user/{userId}")
-  public ResponseEntity<List<PhotoBookmark>> getBookmarksByGroup(@PathVariable Long userId) {
-    List<PhotoBookmark> bookmarks = photoBookmarkService.getBookmarksByUserId(userId);
-    return ResponseEntity.ok(bookmarks);
+  public ResponseEntity<List<ResponseBookmarkDTO>> getBookmarksByGroup(@PathVariable Long userId) {
+    List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByUserId(userId).stream()
+        .map((bookmark) -> {
+          return new ResponseBookmarkDTO(
+              bookmark.getId(),
+              bookmark.getPhoto().getId(),
+              bookmark.getGroupMember().getUser().getId(),
+              bookmark.getCreatedAt());
+        }).toList();
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(bookmarks);
   }
 
   // 사용자 사진 댓글 생성
   @PostMapping("/reply")
-  public ResponseEntity<Long> addReply(@RequestBody RequestReplyDTO request)
+  public ResponseEntity<Long> addReply(@RequestBody @Valid RequestReplyDTO request)
       throws BadRequestException {
     Long result = photoReplyService.addReply(request);
     groupPhotoActivityService.addActivity(request.getGroupId(), request.getUserId(), request.getPhotoId(),
@@ -101,7 +120,10 @@ public class GroupPhotoActivityController {
   public ResponseEntity<List<ResponseQuestionDTO>> getQuestionsByPhotoId(@PathVariable Long photoId) {
     List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
         .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
-    return ResponseEntity.ok(questions);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(questions);
   }
 
 
@@ -119,7 +141,10 @@ public class GroupPhotoActivityController {
 
     List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
         .map((bookmark) -> new ResponseBookmarkDTO(
-            bookmark.getId(), bookmark.getGroupMember().getUser().getId(), bookmark.getCreatedAt())).toList();
+            bookmark.getId(),
+            bookmark.getPhoto().getId(),
+            bookmark.getGroupMember().getUser().getId(),
+            bookmark.getCreatedAt())).toList();
     List<ResponseReplyDTO> replies = photoReplyService.getRepliesByPhotoId(photoId).stream()
         .map((reply) -> new ResponseReplyDTO(
             reply.getId(), reply.getUser().getId(),
@@ -129,7 +154,10 @@ public class GroupPhotoActivityController {
 
     ResponsePhotoActivity response = ResponsePhotoActivity.fromEntity(
         photoId, photo.get().getFilePath(), bookmarks, replies, questions);
-    return ResponseEntity.ok(response);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   /** 여행 그룹 전체 사진에 대한 사진별 활동 정보 조회
@@ -137,33 +165,13 @@ public class GroupPhotoActivityController {
       - 여행 그룹 사진 별 전체 댓글 조회
       - 여행 그룹 사진 별 전체 AI 질문 조회
   */
-  @GetMapping("/photo/{groupId}")
+  @GetMapping("/group/{groupId}")
   public ResponseEntity<List<ResponsePhotoActivity>> getAllGroupPhotoActivity(@PathVariable Long groupId) {
-    Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
-    if (travelGroup.isEmpty()) {
-      return ResponseEntity.noContent().build();
-    }
+    List<ResponsePhotoActivity> response = groupPhotoActivityService.getAllGroupPhotoActivity(groupId);
 
-    List<Photo> photos = photoRepository.findAllByGroup(travelGroup.get());
-    List<ResponsePhotoActivity> response = new ArrayList<>();
-    for (Photo photo : photos) {
-      Long photoId = photo.getId();
-
-      List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
-          .map((bookmark) -> new ResponseBookmarkDTO(
-              bookmark.getId(), bookmark.getGroupMember().getUser().getId(), bookmark.getCreatedAt())).toList();
-      List<ResponseReplyDTO> replies = photoReplyService.getRepliesByPhotoId(photoId).stream()
-          .map((reply) -> new ResponseReplyDTO(
-              reply.getId(), reply.getUser().getId(),
-              reply.getContent(), reply.getCreatedAt())).toList();
-      List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
-          .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
-
-      ResponsePhotoActivity result = ResponsePhotoActivity.fromEntity(photoId, photo.getFilePath(), bookmarks, replies, questions);
-      response.add(result);
-    }
-
-    return ResponseEntity.ok(response);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
   }
 
   /** 여행 그룹 최신 활동 내역 조회
@@ -172,11 +180,22 @@ public class GroupPhotoActivityController {
       - 여행 그룹별 사진 업로드 내역 조회
       - 여행 그룹별 사진 공유 내역 조회
       - 본인 활동 내역 제외
+      - TODO: upload 활동 내역은 본인도 포함
   */
   @GetMapping("/group/{groupId}/user/{userId}")
   public ResponseEntity<List<ResponseGroupActivity>> getGroupRecentActivity(
       @PathVariable Long groupId, @PathVariable Long userId) {
     List<ResponseGroupActivity> response = groupPhotoActivityService.getGroupRecentActivity(groupId, userId);
-    return ResponseEntity.ok(response);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.OK).headers(headers).body(response);
+  }
+
+  @ExceptionHandler({ValidationException.class, IllegalStateException.class})
+  public ResponseEntity<String> handleException(Exception ex) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).headers(headers).body(ex.getMessage());
   }
 }

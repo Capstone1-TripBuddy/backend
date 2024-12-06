@@ -14,6 +14,8 @@ public class ResponseBookmarkDTO {
 
   private Long bookmarkId;
 
+  private Long photoId;
+
   private Long userId;
 
   private LocalDateTime createdAt;

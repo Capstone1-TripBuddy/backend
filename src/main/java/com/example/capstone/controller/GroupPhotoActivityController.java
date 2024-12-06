@@ -8,6 +8,7 @@ import com.example.capstone.dto.ResponseGroupActivity;
 import com.example.capstone.dto.ResponsePhotoActivity;
 import com.example.capstone.dto.ResponseQuestionDTO;
 import com.example.capstone.dto.ResponseReplyDTO;
+import com.example.capstone.entity.GroupPhotoActivity;
 import com.example.capstone.entity.Photo;
 import com.example.capstone.entity.PhotoBookmark;
 import com.example.capstone.entity.TravelGroup;
@@ -21,6 +22,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
@@ -81,8 +83,15 @@ public class GroupPhotoActivityController {
 
   // 사용자 여행 그룹별 북마크 조회
   @GetMapping("/bookmark/user/{userId}")
-  public ResponseEntity<List<PhotoBookmark>> getBookmarksByGroup(@PathVariable Long userId) {
-    List<PhotoBookmark> bookmarks = photoBookmarkService.getBookmarksByUserId(userId);
+  public ResponseEntity<List<ResponseBookmarkDTO>> getBookmarksByGroup(@PathVariable Long userId) {
+    List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByUserId(userId).stream()
+        .map((bookmark) -> {
+          return new ResponseBookmarkDTO(
+              bookmark.getId(),
+              bookmark.getPhoto().getId(),
+              bookmark.getGroupMember().getUser().getId(),
+              bookmark.getCreatedAt());
+        }).toList();
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(mediaType);
@@ -132,7 +141,10 @@ public class GroupPhotoActivityController {
 
     List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
         .map((bookmark) -> new ResponseBookmarkDTO(
-            bookmark.getId(), bookmark.getGroupMember().getUser().getId(), bookmark.getCreatedAt())).toList();
+            bookmark.getId(),
+            bookmark.getPhoto().getId(),
+            bookmark.getGroupMember().getUser().getId(),
+            bookmark.getCreatedAt())).toList();
     List<ResponseReplyDTO> replies = photoReplyService.getRepliesByPhotoId(photoId).stream()
         .map((reply) -> new ResponseReplyDTO(
             reply.getId(), reply.getUser().getId(),
@@ -155,29 +167,7 @@ public class GroupPhotoActivityController {
   */
   @GetMapping("/group/{groupId}")
   public ResponseEntity<List<ResponsePhotoActivity>> getAllGroupPhotoActivity(@PathVariable Long groupId) {
-    Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
-    if (travelGroup.isEmpty()) {
-      return ResponseEntity.noContent().build();
-    }
-
-    List<Photo> photos = photoRepository.findAllByGroup(travelGroup.get());
-    List<ResponsePhotoActivity> response = new ArrayList<>();
-    for (Photo photo : photos) {
-      Long photoId = photo.getId();
-
-      List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
-          .map((bookmark) -> new ResponseBookmarkDTO(
-              bookmark.getId(), bookmark.getGroupMember().getUser().getId(), bookmark.getCreatedAt())).toList();
-      List<ResponseReplyDTO> replies = photoReplyService.getRepliesByPhotoId(photoId).stream()
-          .map((reply) -> new ResponseReplyDTO(
-              reply.getId(), reply.getUser().getId(),
-              reply.getContent(), reply.getCreatedAt())).toList();
-      List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
-          .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
-
-      ResponsePhotoActivity result = ResponsePhotoActivity.fromEntity(photoId, photo.getFilePath(), bookmarks, replies, questions);
-      response.add(result);
-    }
+    List<ResponsePhotoActivity> response = groupPhotoActivityService.getAllGroupPhotoActivity(groupId);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(mediaType);
@@ -190,6 +180,7 @@ public class GroupPhotoActivityController {
       - 여행 그룹별 사진 업로드 내역 조회
       - 여행 그룹별 사진 공유 내역 조회
       - 본인 활동 내역 제외
+      - TODO: upload 활동 내역은 본인도 포함
   */
   @GetMapping("/group/{groupId}/user/{userId}")
   public ResponseEntity<List<ResponseGroupActivity>> getGroupRecentActivity(

@@ -16,14 +16,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -98,14 +102,31 @@ public class AlbumService {
       throw new NoSuchElementException("No photos found for group ID: " + groupId);
     }
 
-    // 5. AlbumPhoto → ResponsePhotoDTO 변환
-    return pagedAlbumPhotos.map(albumPhoto -> {
-      Photo photo = albumPhoto.getPhoto();
-      return new ResponsePhotoDTO(
-          photo.getId(),
-          photo.getFilePath(),
-          photo.getUploadedAt());
-    });
+    // 5. AlbumPhoto → ResponsePhotoDTO 변환 (중복 제거)
+    Set<Long> seenPhotoIds = new HashSet<>();
+
+    // Stream으로 변환 후 Photo ID 기반으로 중복 제거
+    List<ResponsePhotoDTO> distinctPhotoDTOs = pagedAlbumPhotos.getContent().stream()
+        .filter(albumPhoto -> {
+          // Photo ID가 처음 등장하는 경우에만 처리
+          Long photoId = albumPhoto.getPhoto().getId();
+          return seenPhotoIds.add(photoId); // true일 경우만 포함
+        })
+        .map(albumPhoto -> {
+          Photo photo = albumPhoto.getPhoto();
+          return new ResponsePhotoDTO(
+              photo.getId(),
+              photo.getFilePath(),
+              photo.getUploadedAt());
+        })
+        .collect(Collectors.toList());
+
+    // 새로운 Page 객체 생성
+    return new PageImpl<>(
+        distinctPhotoDTOs,
+        pageable,
+        pagedAlbumPhotos.getTotalElements() // 원래 전체 요소 수
+    );
   }
 
 

@@ -41,42 +41,6 @@ public class GroupPhotoActivityService {
   private final PhotoRepository photoRepository;
   private final UserRepository userRepository;
 
-  private final PhotoBookmarkService photoBookmarkService;
-  private final PhotoReplyService photoReplyService;
-  private final PhotoQuestionService photoQuestionService;
-
-
-  public List<ResponsePhotoActivity> getAllGroupPhotoActivity(Long groupId) {
-    Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
-    if (travelGroup.isEmpty()) {
-      throw new NoSuchElementException("getAllGroupPhotoActivity: Travel group not found");
-    }
-
-    List<Photo> photos = photoRepository.findAllByGroup(travelGroup.get()).stream()
-        .sorted(Comparator.comparing(Photo::getUploadedAt).reversed()).toList(); // 최신 업로드 순서대로 정렬
-    List<ResponsePhotoActivity> response = new ArrayList<>();
-    for (Photo photo : photos) {
-      Long photoId = photo.getId();
-
-      List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
-          .map((bookmark) -> new ResponseBookmarkDTO(
-              bookmark.getId(),
-              bookmark.getPhoto().getId(),
-              bookmark.getGroupMember().getUser().getId(),
-              bookmark.getCreatedAt())).toList();
-      List<ResponseReplyDTO> replies = photoReplyService.getRepliesByPhotoId(photoId).stream()
-          .map((reply) -> new ResponseReplyDTO(
-              reply.getId(), reply.getUser().getId(),
-              reply.getContent(), reply.getCreatedAt())).toList();
-      List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
-          .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
-
-      ResponsePhotoActivity result = ResponsePhotoActivity.fromEntity(photoId, photo.getFilePath(), bookmarks, replies, questions);
-      response.add(result);
-    }
-
-    return response;
-  }
 
   public List<ResponseGroupActivity> getGroupRecentActivity(Long groupId, Long userId) {
     // 현재 시간 기준 1시간 전 시간 계산

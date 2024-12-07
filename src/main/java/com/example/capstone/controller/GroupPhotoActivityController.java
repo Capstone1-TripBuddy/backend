@@ -23,6 +23,7 @@ import jakarta.validation.ValidationException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
@@ -55,6 +56,37 @@ public class GroupPhotoActivityController {
   private final PhotoRepository photoRepository;
   private final TravelGroupRepository travelGroupRepository;
 
+  public List<ResponsePhotoActivity> getAllGroupPhotoActivity(Long groupId) {
+    Optional<TravelGroup> travelGroup = travelGroupRepository.findById(groupId);
+    if (travelGroup.isEmpty()) {
+      throw new NoSuchElementException("getAllGroupPhotoActivity: Travel group not found");
+    }
+
+    List<Photo> photos = photoRepository.findAllByGroup(travelGroup.get()).stream()
+        .sorted(Comparator.comparing(Photo::getUploadedAt).reversed()).toList(); // 최신 업로드 순서대로 정렬
+    List<ResponsePhotoActivity> response = new ArrayList<>();
+    for (Photo photo : photos) {
+      Long photoId = photo.getId();
+
+      List<ResponseBookmarkDTO> bookmarks = photoBookmarkService.getBookmarksByPhotoId(photoId).stream()
+          .map((bookmark) -> new ResponseBookmarkDTO(
+              bookmark.getId(),
+              bookmark.getPhoto().getId(),
+              bookmark.getGroupMember().getUser().getId(),
+              bookmark.getCreatedAt())).toList();
+      List<ResponseReplyDTO> replies = photoReplyService.getRepliesByPhotoId(photoId).stream()
+          .map((reply) -> new ResponseReplyDTO(
+              reply.getId(), reply.getUser().getId(),
+              reply.getContent(), reply.getCreatedAt())).toList();
+      List<ResponseQuestionDTO> questions = photoQuestionService.getQuestionsByPhotoId(photoId).stream()
+          .map((question) -> new ResponseQuestionDTO(question.getContent(), question.getCreatedAt())).toList();
+
+      ResponsePhotoActivity result = ResponsePhotoActivity.fromEntity(photoId, photo.getFilePath(), bookmarks, replies, questions);
+      response.add(result);
+    }
+
+    return response;
+  }
 
   @PostMapping("/share")
   public ResponseEntity<Void> addBookmark(@RequestBody @Valid RequestShareDTO request)
@@ -166,8 +198,8 @@ public class GroupPhotoActivityController {
       - 여행 그룹 사진 별 전체 AI 질문 조회
   */
   @GetMapping("/group/{groupId}")
-  public ResponseEntity<List<ResponsePhotoActivity>> getAllGroupPhotoActivity(@PathVariable Long groupId) {
-    List<ResponsePhotoActivity> response = groupPhotoActivityService.getAllGroupPhotoActivity(groupId);
+  public ResponseEntity<List<ResponsePhotoActivity>> findAllGroupPhotoActivity(@PathVariable Long groupId) {
+    List<ResponsePhotoActivity> response = getAllGroupPhotoActivity(groupId);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(mediaType);
